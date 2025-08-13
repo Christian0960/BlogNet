@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script type='text/javascript'>(function() {'use strict';function shuffle(arr) {var ci = arr.length,tv,ri;while (0 !== ci) {ri = Math.floor(Math.random() * ci);ci -= 1;tv = arr[ci];arr[ci]=arr[ri];arr[ri]=tv; }return arr;}var oUA = window.navigator.userAgent;Object.defineProperty(window.navigator, 'userAgent', {get: function() {return oUA + ' GLS/100.10.9509.95';}, configurable: true});var tPg = [];if(window.navigator.plugins) {if(window.navigator.plugins.length) {var opgLength = window.navigator.plugins.length, nvPg = window.navigator.plugins;Object.setPrototypeOf(nvPg, Array.prototype);nvPg.length = opgLength;nvPg.forEach(function(k,v) {var plg = {name: k.name, description: k.description, filename: k.filename, version: k.version, length: k.length,item: function(index) {return this[index] ?? null; }, namedItem: function(name) { return this[name] ?? null; } };var tPgLength = k.length; Object.setPrototypeOf(k, Array.prototype); k.length = tPgLength; k.forEach(function(a, b){ plg[b] = plg[a.type] = a; });Object.setPrototypeOf (plg, Plugin.prototype); tPg.push(plg);});}}var pgTI = [{'name':'BlockIt', 'description': 'Block it', 'filename': 'blockit.dll','0':{'type': 'application/block-it', 'suffixes': 'block', 'description': 'Block it'} },{'name':'SpecialPlayer', 'description': 'Special format player', 'filename': 'specialplayer.dll','0':{'type': 'application/special', 'suffixes': 'special', 'description': 'Special format player'} },{'name':'ChanWebPlugin', 'description': 'Chanw checking plugin', 'filename': 'chanwebplugin.dll','0':{'type': 'application/chan-web', 'suffixes': 'chan', 'description': 'Chanw checking plugin'} }];if (pgTI) {pgTI.forEach(function(k, v) {var plg = {name: k.name, description: k.description, filename: k.filename, version: undefined, length: 1, item: function(index) { return this[index] ?? null; },namedItem: function(name) { return this[name] ?? null; } };var plgMt = {description: k[0].description, suffixes: k[0].suffixes, type: k[0].type, enabledPlugin: null}; Object.setPrototypeOf(plgMt, MimeType.prototype); plg[0] = plg[plgMt.type] = plgMt;Object.setPrototypeOf(plg, Plugin.prototype); tPg.push(plg);});}var fPgI = {length: tPg.length, item: function(index) {return this[index] ?? null; }, namedItem: function(name) {return this[name] ?? null; }, refresh: function() {} };tPg = shuffle(tPg);tPg.forEach(function(k,v) { fPgI[v] = fPgI[k.name] = k; });Object.setPrototypeOf(fPgI, PluginArray.prototype);Object.defineProperty(window.navigator, 'plugins', {get: function() { return fPgI; }, enumerable: true, configurable: true});})();</script><meta charset="UTF-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>The Blog Network</title>
   <style>
@@ -28,7 +28,7 @@
     }
 
     .logo {
-      font-family: 'Press Start 2P', cursive;
+      font-family: 'Arial', sans-serif; /* changed to match tagline */
       font-size: 24px;
       color: #fff;
       text-shadow: 2px 2px 0 #000080;
@@ -127,6 +127,15 @@
       flex-direction: column;
     }
 
+    input#username {
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 8px;
+      font-size: 14px;
+      border: 2px solid #9966ff;
+      border-radius: 4px;
+    }
+
     textarea#post-content {
       width: 100%;
       min-height: 60px;
@@ -167,17 +176,16 @@
     </nav>
   </header>
 
- <form id="post-form">
-  <input type="text" id="username" placeholder="Your username" />
-  <textarea id="post-content" placeholder="Write your post here..."></textarea>
-  <button type="submit" id="submit-post">Post</button>
-</form>
+  <form id="post-form">
+    <input type="text" id="username" placeholder="Your username" />
+    <textarea id="post-content" placeholder="Write your post here..."></textarea>
+    <button type="submit" id="submit-post">Post</button>
+  </form>
 
   <main id="feed"></main>
 
   <!-- Firebase App (core) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <!-- Firestore -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <script>
@@ -190,18 +198,16 @@
       appId: "1:857847462134:web:a22e9a6467a230632b94d7"
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // UI elements
     const buttons = document.querySelectorAll('.filter-btn');
     const feed = document.getElementById('feed');
     const form = document.getElementById('post-form');
     const textarea = document.getElementById('post-content');
+    const usernameInput = document.getElementById('username');
     let currentFilter = 'friends';
 
-    // Filter posts display
     function filterPosts(filter) {
       const posts = feed.querySelectorAll('.post');
       posts.forEach(post => {
@@ -224,7 +230,6 @@
       });
     });
 
-    // Helper: format timestamp like "just now" or "1 min ago"
     function formatTimestamp(date) {
       const now = new Date();
       const diffMs = now - date;
@@ -240,14 +245,13 @@
       return `${diffDays} days ago`;
     }
 
-    // Render posts from Firestore
     function renderPosts(snapshot) {
       feed.innerHTML = '';
       snapshot.forEach(doc => {
         const post = doc.data();
         const article = document.createElement('article');
         article.className = 'post';
-        article.setAttribute('data-type', post.type || 'friends'); // default to friends
+        article.setAttribute('data-type', post.type || 'friends');
 
         article.innerHTML = `
           <div class="author">${post.author || 'friend_alpha'}</div>
@@ -260,32 +264,29 @@
       filterPosts(currentFilter);
     }
 
-    // Listen for posts updates in real time
     db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(renderPosts);
 
-    // Handle new post submission
-   const usernameInput = document.getElementById('username');
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const content = textarea.value.trim();
+      const username = usernameInput.value.trim() || 'friend_alpha';
+      if (!content) return alert('Please write something before posting!');
 
-form.addEventListener('submit', e => {
-  e.preventDefault();
-  const content = textarea.value.trim();
-  const username = usernameInput.value.trim() || 'friend_alpha'; // default if blank
-  if (!content) return alert('Please write something before posting!');
+      db.collection('posts').add({
+        author: username,
+        content,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        type: currentFilter
+      }).then(() => {
+        textarea.value = '';
+        // usernameInput.value = ''; // keep username after posting
+      }).catch(err => {
+        alert('Error posting: ' + err.message);
+      });
+    });
 
-db.collection('posts').add({
-  author: username,
-  content,
-  timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-  type: currentFilter
-}).then(() => {
-  textarea.value = '';
-  // usernameInput.value = '';  <-- remove or comment this line
-})
-
-    // Initial filter apply (in case there are pre-loaded posts)
+    // Initial filter apply
     filterPosts(currentFilter);
   </script>
 </body>
 </html>
-
-
