@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>The Blog Network</title>
   <style>
+    /* Use same font for logo and tagline */
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
     body {
       margin: 0;
-      font-family: 'Arial', sans-serif;
+      font-family: 'Press Start 2P', cursive;
       background: #f0f4ff url('https://www.transparenttextures.com/patterns/tileable-wood-print.png') repeat;
       color: #000080;
       user-select: none;
@@ -26,10 +27,11 @@
     }
 
     .logo {
-      font-family: 'Press Start 2P', cursive;
-      font-size: 36px;
-      color: #fff;
-      text-shadow: 2px 2px 0 #000080;
+      font-size: 18px; /* match tagline */
+      color: #ffe066;
+      font-style: italic;
+      font-weight: bold;
+      text-shadow: 1px 1px 0 #000033;
       user-select: none;
     }
 
@@ -125,23 +127,17 @@
       flex-direction: column;
     }
 
-    input#username {
+    input#username, textarea#post-content {
       width: 100%;
-      margin-bottom: 8px;
       padding: 8px;
       font-size: 14px;
-      border: 2px solid #9966ff;
       border-radius: 4px;
+      border: 2px solid #9966ff;
     }
 
     textarea#post-content {
-      width: 100%;
       min-height: 60px;
       font-family: 'Courier New', Courier, monospace;
-      font-size: 14px;
-      padding: 8px;
-      border: 2px solid #9966ff;
-      border-radius: 4px;
       resize: vertical;
     }
 
@@ -168,12 +164,6 @@
       font-size: 12px;
       color: #333;
     }
-
-    #profile-container img {
-      max-width: 150px;
-      display: block;
-      margin-top: 10px;
-    }
   </style>
 </head>
 <body>
@@ -186,7 +176,8 @@
         <button class="filter-btn" data-filter="unseen">Unseen</button>
         <button class="filter-btn" data-filter="public">Public</button>
       </div>
-      <button id="profile-btn" title="Your Profile">👤</button>
+      <!-- Changed to link to separate profile page -->
+      <a href="profile.html" title="Your Profile" id="profile-btn">👤</a>
     </nav>
   </header>
 
@@ -197,12 +188,6 @@
   </form>
 
   <main id="feed"></main>
-
-  <main id="profile-container" style="display:none;">
-    <div id="profile-info"></div>
-    <div id="profile-friends"></div>
-    <button id="back-to-feed">Back to Feed</button>
-  </main>
 
   <footer>
     <em>EST. 2025 CREATED BY CHRISTIAN (RUPPEEY) DUNLAP & JOHN (PRINCE HERB) NORTON</em>
@@ -229,16 +214,12 @@
     const form = document.getElementById('post-form');
     const textarea = document.getElementById('post-content');
     const usernameInput = document.getElementById('username');
-    const profileBtn = document.getElementById('profile-btn');
-    const backToFeedBtn = document.getElementById('back-to-feed');
     let currentFilter = 'friends';
 
-    // Auto-fill username
     if (localStorage.getItem('username')) {
       usernameInput.value = localStorage.getItem('username');
     }
 
-    // Filter posts
     function filterPosts(filter) {
       const posts = feed.querySelectorAll('.post');
       posts.forEach(post => {
@@ -294,11 +275,7 @@
 
     db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(renderPosts);
 
-    const badWords = [
-      'nigger', 'retard', 'shit', 'nigga', 'fuck', 'bitch', 'bastard', 'crap',
-      'douche', 'dick', 'cunt', 'cock', 'pussy', 'tits', 'dickhead',
-      'slut', 'whore', 'motherfucker',
-    ];
+    const badWords = ['nigger','retard','shit','nigga','fuck','bitch','bastard','crap','douche','dick','cunt','cock','pussy','tits','dickhead','slut','whore','motherfucker'];
 
     function sanitizeText(text) {
       let sanitized = text;
@@ -331,45 +308,7 @@
       });
     });
 
-    function showProfile() {
-      feed.style.display = 'none';
-      document.getElementById('profile-container').style.display = 'block';
-      loadProfile();
-    }
-
-    function showFeed() {
-      document.getElementById('profile-container').style.display = 'none';
-      feed.style.display = 'block';
-    }
-
-    profileBtn.addEventListener('click', showProfile);
-    backToFeedBtn.addEventListener('click', showFeed);
-
-    async function loadProfile() {
-      const currentUserID = 'YOUR_USER_ID_HERE'; // Replace with actual user ID
-      const doc = await db.collection('users').doc(currentUserID).get();
-      if (!doc.exists) return;
-
-      const data = doc.data();
-      document.getElementById('profile-info').innerHTML = `
-        <h2>${data.username}</h2>
-        <p>${data.bio || 'No bio yet'}</p>
-        ${data.avatarURL ? `<img src="${data.avatarURL}" alt="Avatar" />` : ''}
-      `;
-
-      const friendsContainer = document.getElementById('profile-friends');
-      friendsContainer.innerHTML = '<h3>Friends</h3>';
-      data.friends.forEach(async friendID => {
-        const friendDoc = await db.collection('users').doc(friendID).get();
-        if (friendDoc.exists) {
-          friendsContainer.innerHTML += `<p>${friendDoc.data().username}</p>`;
-        }
-      });
-    }
-
     filterPosts(currentFilter);
   </script>
 </body>
 </html>
-
-
