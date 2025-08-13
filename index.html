@@ -159,7 +159,7 @@
 <body>
   <header>
     <div class="logo">THE BLOG NETWORK</div>
-    <div class="tagline">Your space. Your story.</div>
+    <div class="tagline">Chat with others!</div>
     <nav>
       <button class="filter-btn active" data-filter="friends">Friends</button>
       <button class="filter-btn" data-filter="unseen">Unseen</button>
@@ -167,10 +167,11 @@
     </nav>
   </header>
 
-  <form id="post-form">
-    <textarea id="post-content" placeholder="Write your post here..."></textarea>
-    <button type="submit" id="submit-post">Post</button>
-  </form>
+ <form id="post-form">
+  <input type="text" id="username" placeholder="Your username" />
+  <textarea id="post-content" placeholder="Write your post here..."></textarea>
+  <button type="submit" id="submit-post">Post</button>
+</form>
 
   <main id="feed"></main>
 
@@ -263,25 +264,30 @@
     db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(renderPosts);
 
     // Handle new post submission
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      const content = textarea.value.trim();
-      if (!content) return alert('Please write something before posting!');
+   const usernameInput = document.getElementById('username');
 
-      db.collection('posts').add({
-        author: 'friend_alpha',
-        content,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        type: currentFilter
-      }).then(() => {
-        textarea.value = '';
-      }).catch(err => {
-        alert('Error posting: ' + err.message);
-      });
-    });
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const content = textarea.value.trim();
+  const username = usernameInput.value.trim() || 'friend_alpha'; // default if blank
+  if (!content) return alert('Please write something before posting!');
+
+  db.collection('posts').add({
+    author: username,
+    content,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    type: currentFilter
+  }).then(() => {
+    textarea.value = '';
+    usernameInput.value = ''; // optional: clear username after post
+  }).catch(err => {
+    alert('Error posting: ' + err.message);
+  });
+});
 
     // Initial filter apply (in case there are pre-loaded posts)
     filterPosts(currentFilter);
   </script>
 </body>
 </html>
+
