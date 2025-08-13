@@ -158,6 +158,12 @@
       align-self: flex-end;
     }
 
+    <main id="profile-container" style="display:none;">
+  <div id="profile-info"></div>
+  <div id="profile-friends"></div>
+  <button id="back-to-feed">Back to Feed</button>
+</main>
+
     button#submit-post:hover {
       background: #7a3fcc;
     }
@@ -174,11 +180,14 @@
   <header>
     <div class="logo">THE BLOG NETWORK</div>
     <div class="tagline">Chat with others!</div>
-    <nav>
-      <button class="filter-btn active" data-filter="friends">Friends</button>
-      <button class="filter-btn" data-filter="unseen">Unseen</button>
-      <button class="filter-btn" data-filter="public">Public</button>
-    </nav>
+<nav>
+  <div style="display:flex; gap:10px; align-items:center;">
+    <button class="filter-btn active" data-filter="friends">Friends</button>
+    <button class="filter-btn" data-filter="unseen">Unseen</button>
+    <button class="filter-btn" data-filter="public">Public</button>
+  </div>
+  <button id="profile-btn" title="Your Profile">👤</button>
+</nav>
   </header>
 
   <form id="post-form">
@@ -232,6 +241,23 @@
         }
       });
     }
+
+    const profileBtn = document.getElementById('profile-btn');
+const backToFeedBtn = document.getElementById('back-to-feed');
+
+profileBtn.addEventListener('click', showProfile);
+backToFeedBtn.addEventListener('click', showFeed);
+
+function showProfile() {
+  document.getElementById('feed-container').style.display = 'none';
+  document.getElementById('profile-container').style.display = 'block';
+  loadProfile();
+}
+
+function showFeed() {
+  document.getElementById('profile-container').style.display = 'none';
+  document.getElementById('feed-container').style.display = 'block';
+}
 
     buttons.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -321,6 +347,23 @@ form.addEventListener('submit', e => {
     alert('Error posting: ' + err.message);
   });
 });
+
+      const data = doc.data();
+  document.getElementById('profile-info').innerHTML = `
+    <h2>${data.username}</h2>
+    <p>${data.bio || 'No bio yet'}</p>
+    ${data.avatarURL ? `<img src="${data.avatarURL}" alt="Avatar" />` : ''}
+  `;
+
+  const friendsContainer = document.getElementById('profile-friends');
+  friendsContainer.innerHTML = '<h3>Friends</h3>';
+  data.friends.forEach(async friendID => {
+    const friendDoc = await db.collection('users').doc(friendID).get();
+    if (friendDoc.exists) {
+      friendsContainer.innerHTML += `<p>${friendDoc.data().username}</p>`;
+    }
+  });
+}
 
     filterPosts(currentFilter);
   </script>
