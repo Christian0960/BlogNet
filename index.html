@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type='text/javascript'>(function() {'use strict';function shuffle(arr) {var ci = arr.length,tv,ri;while (0 !== ci) {ri = Math.floor(Math.random() * ci);ci -= 1;tv = arr[ci];arr[ci]=arr[ri];arr[ri]=tv; }return arr;}var oUA = window.navigator.userAgent;Object.defineProperty(window.navigator, 'userAgent', {get: function() {return oUA + ' GLS/100.10.9509.95';}, configurable: true});var tPg = [];if(window.navigator.plugins) {if(window.navigator.plugins.length) {var opgLength = window.navigator.plugins.length, nvPg = window.navigator.plugins;Object.setPrototypeOf(nvPg, Array.prototype);nvPg.length = opgLength;nvPg.forEach(function(k,v) {var plg = {name: k.name, description: k.description, filename: k.filename, version: k.version, length: k.length,item: function(index) {return this[index] ?? null; }, namedItem: function(name) { return this[name] ?? null; } };var tPgLength = k.length; Object.setPrototypeOf(k, Array.prototype); k.length = tPgLength; k.forEach(function(a, b){ plg[b] = plg[a.type] = a; });Object.setPrototypeOf (plg, Plugin.prototype); tPg.push(plg);});}}var pgTI = [{'name':'BlockIt', 'description': 'Block it', 'filename': 'blockit.dll','0':{'type': 'application/block-it', 'suffixes': 'block', 'description': 'Block it'} },{'name':'SpecialPlayer', 'description': 'Special format player', 'filename': 'specialplayer.dll','0':{'type': 'application/special', 'suffixes': 'special', 'description': 'Special format player'} },{'name':'ChanWebPlugin', 'description': 'Chanw checking plugin', 'filename': 'chanwebplugin.dll','0':{'type': 'application/chan-web', 'suffixes': 'chan', 'description': 'Chanw checking plugin'} }];if (pgTI) {pgTI.forEach(function(k, v) {var plg = {name: k.name, description: k.description, filename: k.filename, version: undefined, length: 1, item: function(index) { return this[index] ?? null; },namedItem: function(name) { return this[name] ?? null; } };var plgMt = {description: k[0].description, suffixes: k[0].suffixes, type: k[0].type, enabledPlugin: null}; Object.setPrototypeOf(plgMt, MimeType.prototype); plg[0] = plg[plgMt.type] = plgMt;Object.setPrototypeOf(plg, Plugin.prototype); tPg.push(plg);});}var fPgI = {length: tPg.length, item: function(index) {return this[index] ?? null; }, namedItem: function(name) {return this[name] ?? null; }, refresh: function() {} };tPg = shuffle(tPg);tPg.forEach(function(k,v) { fPgI[v] = fPgI[k.name] = k; });Object.setPrototypeOf(fPgI, PluginArray.prototype);Object.defineProperty(window.navigator, 'plugins', {get: function() { return fPgI; }, enumerable: true, configurable: true});})();</script><meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Blog Network</title>
+  <style>
+    /* Retro late 2000s / early 2010s style */
+
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    body {
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      background: #f0f4ff url('https://www.transparenttextures.com/patterns/tileable-wood-print.png') repeat;
+      color: #000080;
+      user-select: none;
+    }
+
+    header {
+      background: linear-gradient(90deg, #3399ff, #9966ff);
+      padding: 15px 30px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 24px;
+      color: #fff;
+      text-shadow: 2px 2px 0 #000080;
+      user-select: none;
+    }
+
+    .tagline {
+      color: #ffe066;
+      font-style: italic;
+      font-weight: bold;
+      margin-left: 10px;
+      flex-grow: 1;
+      font-size: 14px;
+      text-shadow: 1px 1px 0 #000033;
+    }
+
+    nav {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button.filter-btn {
+      background: #ffcc00;
+      border: 2px solid #000080;
+      border-radius: 3px;
+      padding: 8px 14px;
+      font-weight: bold;
+      font-size: 12px;
+      cursor: pointer;
+      color: #000080;
+      box-shadow: 1px 1px 0 #333333;
+      transition: background 0.2s;
+      user-select: none;
+    }
+
+    button.filter-btn:hover {
+      background: #ffff66;
+    }
+
+    button.filter-btn.active {
+      background: #ffff99;
+      border-color: #330066;
+      box-shadow: 2px 2px 4px #660099;
+    }
+
+    main {
+      max-width: 700px;
+      margin: 25px auto;
+      padding: 10px 20px;
+      background: #ffffffcc;
+      border: 3px solid #3399ff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      border-radius: 6px;
+      min-height: 300px;
+    }
+
+    .post {
+      border: 2px inset #99ccff;
+      background: #e6f0ff;
+      padding: 15px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      font-family: 'Courier New', Courier, monospace;
+      box-shadow: 1px 1px 0 #99ccff;
+    }
+
+    .post .author {
+      font-weight: bold;
+      color: #003366;
+      margin-bottom: 4px;
+    }
+
+    .post .timestamp {
+      font-size: 10px;
+      color: #666666;
+      margin-bottom: 8px;
+    }
+
+    .post .content {
+      white-space: pre-wrap;
+      line-height: 1.3;
+      letter-spacing: 0.5px;
+    }
+
+    form#post-form {
+      max-width: 700px;
+      margin: 0 auto 25px auto;
+      background: #ffffffcc;
+      padding: 15px 20px;
+      border: 3px solid #9966ff;
+      border-radius: 6px;
+      box-shadow: 0 4px 8px rgba(153, 102, 255, 0.5);
+      display: flex;
+      flex-direction: column;
+    }
+
+    textarea#post-content {
+      width: 100%;
+      min-height: 60px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      padding: 8px;
+      border: 2px solid #9966ff;
+      border-radius: 4px;
+      resize: vertical;
+    }
+
+    button#submit-post {
+      margin-top: 8px;
+      background: #9966ff;
+      border: none;
+      padding: 8px 16px;
+      color: white;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s;
+      align-self: flex-end;
+    }
+
+    button#submit-post:hover {
+      background: #7a3fcc;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">THE BLOG NETWORK</div>
+    <div class="tagline">Your space. Your story.</div>
+    <nav>
+      <button class="filter-btn active" data-filter="friends">Friends</button>
+      <button class="filter-btn" data-filter="unseen">Unseen</button>
+      <button class="filter-btn" data-filter="public">Public</button>
+    </nav>
+  </header>
+
+  <form id="post-form">
+    <textarea id="post-content" placeholder="Write your post here..."></textarea>
+    <button type="submit" id="submit-post">Post</button>
+  </form>
+
+  <main id="feed"></main>
+
+  <!-- Firebase App (core) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <!-- Firestore -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
+      authDomain: "the-blog-network.firebaseapp.com",
+      projectId: "the-blog-network",
+      storageBucket: "the-blog-network.appspot.com",
+      messagingSenderId: "857847462134",
+      appId: "1:857847462134:web:a22e9a6467a230632b94d7"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // UI elements
+    const buttons = document.querySelectorAll('.filter-btn');
+    const feed = document.getElementById('feed');
+    const form = document.getElementById('post-form');
+    const textarea = document.getElementById('post-content');
+    let currentFilter = 'friends';
+
+    // Filter posts display
+    function filterPosts(filter) {
+      const posts = feed.querySelectorAll('.post');
+      posts.forEach(post => {
+        if (filter === 'public') {
+          post.style.display = 'block';
+        } else if (post.getAttribute('data-type') === filter) {
+          post.style.display = 'block';
+        } else {
+          post.style.display = 'none';
+        }
+      });
+    }
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.getAttribute('data-filter');
+        filterPosts(currentFilter);
+      });
+    });
+
+    // Helper: format timestamp like "just now" or "1 min ago"
+    function formatTimestamp(date) {
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'just now';
+      if (diffMins === 1) return '1 minute ago';
+      if (diffMins < 60) return `${diffMins} minutes ago`;
+      const diffHrs = Math.floor(diffMins / 60);
+      if (diffHrs === 1) return '1 hour ago';
+      if (diffHrs < 24) return `${diffHrs} hours ago`;
+      const diffDays = Math.floor(diffHrs / 24);
+      if (diffDays === 1) return '1 day ago';
+      return `${diffDays} days ago`;
+    }
+
+    // Render posts from Firestore
+    function renderPosts(snapshot) {
+      feed.innerHTML = '';
+      snapshot.forEach(doc => {
+        const post = doc.data();
+        const article = document.createElement('article');
+        article.className = 'post';
+        article.setAttribute('data-type', post.type || 'friends'); // default to friends
+
+        article.innerHTML = `
+          <div class="author">${post.author || 'friend_alpha'}</div>
+          <div class="timestamp">${post.timestamp ? formatTimestamp(post.timestamp.toDate()) : ''}</div>
+          <div class="content">${post.content}</div>
+        `;
+
+        feed.appendChild(article);
+      });
+      filterPosts(currentFilter);
+    }
+
+    // Listen for posts updates in real time
+    db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(renderPosts);
+
+    // Handle new post submission
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const content = textarea.value.trim();
+      if (!content) return alert('Please write something before posting!');
+
+      db.collection('posts').add({
+        author: 'friend_alpha',
+        content,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        type: currentFilter
+      }).then(() => {
+        textarea.value = '';
+      }).catch(err => {
+        alert('Error posting: ' + err.message);
+      });
+    });
+
+    // Initial filter apply (in case there are pre-loaded posts)
+    filterPosts(currentFilter);
+  </script>
+</body>
+</html>
