@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>The Blog Network</title>
   <style>
-    /* Retro late 2000s / early 2010s style */
-
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
     body {
@@ -19,7 +17,7 @@
 
     header {
       background: linear-gradient(90deg, #3399ff, #9966ff);
-      padding: 15px 30px;
+      padding: 20px 30px;
       box-shadow: 0 3px 6px rgba(0,0,0,0.3);
       display: flex;
       align-items: center;
@@ -28,8 +26,8 @@
     }
 
     .logo {
-      font-family: 'Arial', sans-serif; /* changed to match tagline */
-      font-size: 24px;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 36px; /* increased */
       color: #fff;
       text-shadow: 2px 2px 0 #000080;
       user-select: none;
@@ -41,7 +39,7 @@
       font-weight: bold;
       margin-left: 10px;
       flex-grow: 1;
-      font-size: 14px;
+      font-size: 18px; /* increased */
       text-shadow: 1px 1px 0 #000033;
     }
 
@@ -163,6 +161,13 @@
     button#submit-post:hover {
       background: #7a3fcc;
     }
+
+    footer {
+      text-align: center;
+      margin: 20px auto;
+      font-size: 12px;
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -184,118 +189,140 @@
 
   <main id="feed"></main>
 
-  <!-- Firebase App (core) -->
+  <footer>
+    <em>est. Write your footnote here</em>
+  </footer>
+
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
-    authDomain: "the-blog-network.firebaseapp.com",
-    projectId: "the-blog-network",
-    storageBucket: "the-blog-network.appspot.com",
-    messagingSenderId: "857847462134",
-    appId: "1:857847462134:web:a22e9a6467a230632b94d7"
-  };
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
+      authDomain: "the-blog-network.firebaseapp.com",
+      projectId: "the-blog-network",
+      storageBucket: "the-blog-network.appspot.com",
+      messagingSenderId: "857847462134",
+      appId: "1:857847462134:web:a22e9a6467a230632b94d7"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+    const buttons = document.querySelectorAll('.filter-btn');
+    const feed = document.getElementById('feed');
+    const form = document.getElementById('post-form');
+    const textarea = document.getElementById('post-content');
+    const usernameInput = document.getElementById('username');
+    let currentFilter = 'friends';
 
-  const buttons = document.querySelectorAll('.filter-btn');
-  const feed = document.getElementById('feed');
-  const form = document.getElementById('post-form');
-  const textarea = document.getElementById('post-content');
-  const usernameInput = document.getElementById('username');
-  let currentFilter = 'friends';
+    // Auto-fill username
+    if (localStorage.getItem('username')) {
+      usernameInput.value = localStorage.getItem('username');
+    }
 
-  // Auto-fill username from localStorage if exists
-  if (localStorage.getItem('username')) {
-    usernameInput.value = localStorage.getItem('username');
-  }
+    // Filter posts
+    function filterPosts(filter) {
+      const posts = feed.querySelectorAll('.post');
+      posts.forEach(post => {
+        if (filter === 'public' || post.getAttribute('data-type') === filter) {
+          post.style.display = 'block';
+        } else {
+          post.style.display = 'none';
+        }
+      });
+    }
 
-  function filterPosts(filter) {
-    const posts = feed.querySelectorAll('.post');
-    posts.forEach(post => {
-      if (filter === 'public') {
-        post.style.display = 'block';
-      } else if (post.getAttribute('data-type') === filter) {
-        post.style.display = 'block';
-      } else {
-        post.style.display = 'none';
-      }
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.getAttribute('data-filter');
+        filterPosts(currentFilter);
+      });
     });
-  }
 
-  buttons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      buttons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentFilter = btn.getAttribute('data-filter');
+    function formatTimestamp(date) {
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'just now';
+      if (diffMins === 1) return '1 minute ago';
+      if (diffMins < 60) return `${diffMins} minutes ago`;
+      const diffHrs = Math.floor(diffMins / 60);
+      if (diffHrs === 1) return '1 hour ago';
+      if (diffHrs < 24) return `${diffHrs} hours ago`;
+      const diffDays = Math.floor(diffHrs / 24);
+      if (diffDays === 1) return '1 day ago';
+      return `${diffDays} days ago`;
+    }
+
+    function renderPosts(snapshot) {
+      feed.innerHTML = '';
+      snapshot.forEach(doc => {
+        const post = doc.data();
+        const article = document.createElement('article');
+        article.className = 'post';
+        article.setAttribute('data-type', post.type || 'friends');
+
+        article.innerHTML = `
+          <div class="author">${post.author || 'friend_alpha'}</div>
+          <div class="timestamp">${post.timestamp ? formatTimestamp(post.timestamp.toDate()) : ''}</div>
+          <div class="content">${post.content}</div>
+        `;
+        feed.appendChild(article);
+      });
       filterPosts(currentFilter);
-    });
+    }
+
+    db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(renderPosts);
+    
+   // List of words to filter (case-insensitive)
+const badWords = [
+  'nigger', 'retard', 'shit', 'nigga', 'fuck', 'bitch', 'bastard', 'crap',
+  'douche', 'dick', 'cunt', 'cock', 'pussy', 'tits', 'dickhead',
+  'slut', 'whore', 'motherfucker',
+  // Add other slurs as needed, encoded safely if desired
+];
+
+// Function to sanitize text
+function sanitizeText(text) {
+  let sanitized = text;
+  badWords.forEach(word => {
+    // Create a case-insensitive regex for each bad word
+    const regex = new RegExp(`\\b${word}\\b`, 'gi');
+    sanitized = sanitized.replace(regex, '****');
   });
+  return sanitized;
+}
 
-  function formatTimestamp(date) {
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 1) return 'just now';
-    if (diffMins === 1) return '1 minute ago';
-    if (diffMins < 60) return `${diffMins} minutes ago`;
-    const diffHrs = Math.floor(diffMins / 60);
-    if (diffHrs === 1) return '1 hour ago';
-    if (diffHrs < 24) return `${diffHrs} hours ago`;
-    const diffDays = Math.floor(diffHrs / 24);
-    if (diffDays === 1) return '1 day ago';
-    return `${diffDays} days ago`;
-  }
+// Handle new post submission
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const rawContent = textarea.value.trim();
+  let username = usernameInput.value.trim() || 'friend_alpha';
+  if (!rawContent) return alert('Please write something before posting!');
 
-  function renderPosts(snapshot) {
-    feed.innerHTML = '';
-    snapshot.forEach(doc => {
-      const post = doc.data();
-      const article = document.createElement('article');
-      article.className = 'post';
-      article.setAttribute('data-type', post.type || 'friends');
+  // Save username to localStorage
+  localStorage.setItem('username', username);
 
-      article.innerHTML = `
-        <div class="author">${post.author || 'friend_alpha'}</div>
-        <div class="timestamp">${post.timestamp ? formatTimestamp(post.timestamp.toDate()) : ''}</div>
-        <div class="content">${post.content}</div>
-      `;
+  // Sanitize content
+  const content = sanitizeText(rawContent);
 
-      feed.appendChild(article);
-    });
+  db.collection('posts').add({
+    author: username,
+    content,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    type: currentFilter
+  }).then(() => {
+    textarea.value = '';
+    // usernameInput.value remains so user doesn't have to retype
+  }).catch(err => {
+    alert('Error posting: ' + err.message);
+  });
+});
+
     filterPosts(currentFilter);
-  }
-
-  db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(renderPosts);
-
-  form.addEventListener('submit', e => {
-    e.preventDefault();
-    const content = textarea.value.trim();
-    let username = usernameInput.value.trim() || 'friend_alpha';
-    if (!content) return alert('Please write something before posting!');
-
-    // Save username to localStorage
-    localStorage.setItem('username', username);
-
-    db.collection('posts').add({
-      author: username,
-      content,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      type: currentFilter
-    }).then(() => {
-      textarea.value = '';
-      // usernameInput.value remains so user doesn't have to retype
-    }).catch(err => {
-      alert('Error posting: ' + err.message);
-    });
-  });
-
-  // Initial filter apply
-  filterPosts(currentFilter);
   </script>
 </body>
 </html>
-
