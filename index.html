@@ -188,105 +188,114 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
-      authDomain: "the-blog-network.firebaseapp.com",
-      projectId: "the-blog-network",
-      storageBucket: "the-blog-network.appspot.com",
-      messagingSenderId: "857847462134",
-      appId: "1:857847462134:web:a22e9a6467a230632b94d7"
-    };
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
+    authDomain: "the-blog-network.firebaseapp.com",
+    projectId: "the-blog-network",
+    storageBucket: "the-blog-network.appspot.com",
+    messagingSenderId: "857847462134",
+    appId: "1:857847462134:web:a22e9a6467a230632b94d7"
+  };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
-    const buttons = document.querySelectorAll('.filter-btn');
-    const feed = document.getElementById('feed');
-    const form = document.getElementById('post-form');
-    const textarea = document.getElementById('post-content');
-    const usernameInput = document.getElementById('username');
-    let currentFilter = 'friends';
+  const buttons = document.querySelectorAll('.filter-btn');
+  const feed = document.getElementById('feed');
+  const form = document.getElementById('post-form');
+  const textarea = document.getElementById('post-content');
+  const usernameInput = document.getElementById('username');
+  let currentFilter = 'friends';
 
-    function filterPosts(filter) {
-      const posts = feed.querySelectorAll('.post');
-      posts.forEach(post => {
-        if (filter === 'public') {
-          post.style.display = 'block';
-        } else if (post.getAttribute('data-type') === filter) {
-          post.style.display = 'block';
-        } else {
-          post.style.display = 'none';
-        }
-      });
-    }
+  // Auto-fill username from localStorage if exists
+  if (localStorage.getItem('username')) {
+    usernameInput.value = localStorage.getItem('username');
+  }
 
-    buttons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        buttons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentFilter = btn.getAttribute('data-filter');
-        filterPosts(currentFilter);
-      });
+  function filterPosts(filter) {
+    const posts = feed.querySelectorAll('.post');
+    posts.forEach(post => {
+      if (filter === 'public') {
+        post.style.display = 'block';
+      } else if (post.getAttribute('data-type') === filter) {
+        post.style.display = 'block';
+      } else {
+        post.style.display = 'none';
+      }
     });
+  }
 
-    function formatTimestamp(date) {
-      const now = new Date();
-      const diffMs = now - date;
-      const diffMins = Math.floor(diffMs / 60000);
-      if (diffMins < 1) return 'just now';
-      if (diffMins === 1) return '1 minute ago';
-      if (diffMins < 60) return `${diffMins} minutes ago`;
-      const diffHrs = Math.floor(diffMins / 60);
-      if (diffHrs === 1) return '1 hour ago';
-      if (diffHrs < 24) return `${diffHrs} hours ago`;
-      const diffDays = Math.floor(diffHrs / 24);
-      if (diffDays === 1) return '1 day ago';
-      return `${diffDays} days ago`;
-    }
-
-    function renderPosts(snapshot) {
-      feed.innerHTML = '';
-      snapshot.forEach(doc => {
-        const post = doc.data();
-        const article = document.createElement('article');
-        article.className = 'post';
-        article.setAttribute('data-type', post.type || 'friends');
-
-        article.innerHTML = `
-          <div class="author">${post.author || 'friend_alpha'}</div>
-          <div class="timestamp">${post.timestamp ? formatTimestamp(post.timestamp.toDate()) : ''}</div>
-          <div class="content">${post.content}</div>
-        `;
-
-        feed.appendChild(article);
-      });
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.getAttribute('data-filter');
       filterPosts(currentFilter);
-    }
-
-    db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(renderPosts);
-
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      const content = textarea.value.trim();
-      const username = usernameInput.value.trim() || 'friend_alpha';
-      if (!content) return alert('Please write something before posting!');
-
-      db.collection('posts').add({
-        author: username,
-        content,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        type: currentFilter
-      }).then(() => {
-        textarea.value = '';
-        // usernameInput.value = ''; // keep username after posting
-      }).catch(err => {
-        alert('Error posting: ' + err.message);
-      });
     });
+  });
 
-    // Initial filter apply
+  function formatTimestamp(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins === 1) return '1 minute ago';
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    const diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs === 1) return '1 hour ago';
+    if (diffHrs < 24) return `${diffHrs} hours ago`;
+    const diffDays = Math.floor(diffHrs / 24);
+    if (diffDays === 1) return '1 day ago';
+    return `${diffDays} days ago`;
+  }
+
+  function renderPosts(snapshot) {
+    feed.innerHTML = '';
+    snapshot.forEach(doc => {
+      const post = doc.data();
+      const article = document.createElement('article');
+      article.className = 'post';
+      article.setAttribute('data-type', post.type || 'friends');
+
+      article.innerHTML = `
+        <div class="author">${post.author || 'friend_alpha'}</div>
+        <div class="timestamp">${post.timestamp ? formatTimestamp(post.timestamp.toDate()) : ''}</div>
+        <div class="content">${post.content}</div>
+      `;
+
+      feed.appendChild(article);
+    });
     filterPosts(currentFilter);
+  }
+
+  db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(renderPosts);
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const content = textarea.value.trim();
+    let username = usernameInput.value.trim() || 'friend_alpha';
+    if (!content) return alert('Please write something before posting!');
+
+    // Save username to localStorage
+    localStorage.setItem('username', username);
+
+    db.collection('posts').add({
+      author: username,
+      content,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      type: currentFilter
+    }).then(() => {
+      textarea.value = '';
+      // usernameInput.value remains so user doesn't have to retype
+    }).catch(err => {
+      alert('Error posting: ' + err.message);
+    });
+  });
+
+  // Initial filter apply
+  filterPosts(currentFilter);
   </script>
 </body>
 </html>
+
