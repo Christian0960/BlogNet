@@ -27,7 +27,7 @@
 
     .logo {
       font-family: 'Press Start 2P', cursive;
-      font-size: 36px; /* increased */
+      font-size: 36px;
       color: #fff;
       text-shadow: 2px 2px 0 #000080;
       user-select: none;
@@ -39,7 +39,7 @@
       font-weight: bold;
       margin-left: 10px;
       flex-grow: 1;
-      font-size: 18px; /* increased */
+      font-size: 18px;
       text-shadow: 1px 1px 0 #000033;
     }
 
@@ -158,12 +158,6 @@
       align-self: flex-end;
     }
 
-    <main id="profile-container" style="display:none;">
-  <div id="profile-info"></div>
-  <div id="profile-friends"></div>
-  <button id="back-to-feed">Back to Feed</button>
-</main>
-
     button#submit-post:hover {
       background: #7a3fcc;
     }
@@ -174,20 +168,26 @@
       font-size: 12px;
       color: #333;
     }
+
+    #profile-container img {
+      max-width: 150px;
+      display: block;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="logo">THE BLOG NETWORK</div>
     <div class="tagline">Chat with others!</div>
-<nav>
-  <div style="display:flex; gap:10px; align-items:center;">
-    <button class="filter-btn active" data-filter="friends">Friends</button>
-    <button class="filter-btn" data-filter="unseen">Unseen</button>
-    <button class="filter-btn" data-filter="public">Public</button>
-  </div>
-  <button id="profile-btn" title="Your Profile">👤</button>
-</nav>
+    <nav>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button class="filter-btn active" data-filter="friends">Friends</button>
+        <button class="filter-btn" data-filter="unseen">Unseen</button>
+        <button class="filter-btn" data-filter="public">Public</button>
+      </div>
+      <button id="profile-btn" title="Your Profile">👤</button>
+    </nav>
   </header>
 
   <form id="post-form">
@@ -198,8 +198,14 @@
 
   <main id="feed"></main>
 
+  <main id="profile-container" style="display:none;">
+    <div id="profile-info"></div>
+    <div id="profile-friends"></div>
+    <button id="back-to-feed">Back to Feed</button>
+  </main>
+
   <footer>
-    <em>est. Write your footnote here</em>
+    <em>EST. 2025 CREATED BY CHRISTIAN (RUPPEEY) DUNLAP & JOHN (PRINCE HERB) NORTON</em>
   </footer>
 
   <!-- Firebase -->
@@ -223,6 +229,8 @@
     const form = document.getElementById('post-form');
     const textarea = document.getElementById('post-content');
     const usernameInput = document.getElementById('username');
+    const profileBtn = document.getElementById('profile-btn');
+    const backToFeedBtn = document.getElementById('back-to-feed');
     let currentFilter = 'friends';
 
     // Auto-fill username
@@ -241,23 +249,6 @@
         }
       });
     }
-
-    const profileBtn = document.getElementById('profile-btn');
-const backToFeedBtn = document.getElementById('back-to-feed');
-
-profileBtn.addEventListener('click', showProfile);
-backToFeedBtn.addEventListener('click', showFeed);
-
-function showProfile() {
-  document.getElementById('feed-container').style.display = 'none';
-  document.getElementById('profile-container').style.display = 'block';
-  loadProfile();
-}
-
-function showFeed() {
-  document.getElementById('profile-container').style.display = 'none';
-  document.getElementById('feed-container').style.display = 'block';
-}
 
     buttons.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -302,70 +293,83 @@ function showFeed() {
     }
 
     db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(renderPosts);
-    
-   // List of words to filter (case-insensitive)
-const badWords = [
-  'nigger', 'retard', 'shit', 'nigga', 'fuck', 'bitch', 'bastard', 'crap',
-  'douche', 'dick', 'cunt', 'cock', 'pussy', 'tits', 'dickhead',
-  'slut', 'whore', 'motherfucker',
-  // Add other slurs as needed, encoded safely if desired
-];
 
-// Function to sanitize text
-function sanitizeText(text) {
-  let sanitized = text;
-  badWords.forEach(word => {
-    // Create a case-insensitive regex for each bad word
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    sanitized = sanitized.replace(regex, '****');
-  });
-  return sanitized;
-}
+    const badWords = [
+      'nigger', 'retard', 'shit', 'nigga', 'fuck', 'bitch', 'bastard', 'crap',
+      'douche', 'dick', 'cunt', 'cock', 'pussy', 'tits', 'dickhead',
+      'slut', 'whore', 'motherfucker',
+    ];
 
-// Handle new post submission
-form.addEventListener('submit', e => {
-  e.preventDefault();
-  const rawContent = textarea.value.trim();
-  let username = usernameInput.value.trim() || 'friend_alpha';
-  if (!rawContent) return alert('Please write something before posting!');
+    function sanitizeText(text) {
+      let sanitized = text;
+      badWords.forEach(word => {
+        const regex = new RegExp(`\\b${word}\\b`, 'gi');
+        sanitized = sanitized.replace(regex, '****');
+      });
+      return sanitized;
+    }
 
-  // Save username to localStorage
-  localStorage.setItem('username', username);
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const rawContent = textarea.value.trim();
+      let username = usernameInput.value.trim() || 'friend_alpha';
+      if (!rawContent) return alert('Please write something before posting!');
 
-  // Sanitize content
-  const content = sanitizeText(rawContent);
+      localStorage.setItem('username', username);
 
-  db.collection('posts').add({
-    author: username,
-    content,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    type: currentFilter
-  }).then(() => {
-    textarea.value = '';
-    // usernameInput.value remains so user doesn't have to retype
-  }).catch(err => {
-    alert('Error posting: ' + err.message);
-  });
-});
+      const content = sanitizeText(rawContent);
+
+      db.collection('posts').add({
+        author: username,
+        content,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        type: currentFilter
+      }).then(() => {
+        textarea.value = '';
+      }).catch(err => {
+        alert('Error posting: ' + err.message);
+      });
+    });
+
+    function showProfile() {
+      feed.style.display = 'none';
+      document.getElementById('profile-container').style.display = 'block';
+      loadProfile();
+    }
+
+    function showFeed() {
+      document.getElementById('profile-container').style.display = 'none';
+      feed.style.display = 'block';
+    }
+
+    profileBtn.addEventListener('click', showProfile);
+    backToFeedBtn.addEventListener('click', showFeed);
+
+    async function loadProfile() {
+      const currentUserID = 'YOUR_USER_ID_HERE'; // Replace with actual user ID
+      const doc = await db.collection('users').doc(currentUserID).get();
+      if (!doc.exists) return;
 
       const data = doc.data();
-  document.getElementById('profile-info').innerHTML = `
-    <h2>${data.username}</h2>
-    <p>${data.bio || 'No bio yet'}</p>
-    ${data.avatarURL ? `<img src="${data.avatarURL}" alt="Avatar" />` : ''}
-  `;
+      document.getElementById('profile-info').innerHTML = `
+        <h2>${data.username}</h2>
+        <p>${data.bio || 'No bio yet'}</p>
+        ${data.avatarURL ? `<img src="${data.avatarURL}" alt="Avatar" />` : ''}
+      `;
 
-  const friendsContainer = document.getElementById('profile-friends');
-  friendsContainer.innerHTML = '<h3>Friends</h3>';
-  data.friends.forEach(async friendID => {
-    const friendDoc = await db.collection('users').doc(friendID).get();
-    if (friendDoc.exists) {
-      friendsContainer.innerHTML += `<p>${friendDoc.data().username}</p>`;
+      const friendsContainer = document.getElementById('profile-friends');
+      friendsContainer.innerHTML = '<h3>Friends</h3>';
+      data.friends.forEach(async friendID => {
+        const friendDoc = await db.collection('users').doc(friendID).get();
+        if (friendDoc.exists) {
+          friendsContainer.innerHTML += `<p>${friendDoc.data().username}</p>`;
+        }
+      });
     }
-  });
-}
 
     filterPosts(currentFilter);
   </script>
 </body>
 </html>
+
+
