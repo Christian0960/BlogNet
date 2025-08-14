@@ -23,20 +23,11 @@
     flex-wrap: wrap;
   }
 
-  .logo-container {
-    display: flex;
-    align-items: baseline;
-    gap: 15px;
-  }
-
+  .logo-container { display: flex; align-items: baseline; gap: 15px; }
   .logo { font-size: 36px; font-weight: bold; color: #fff; }
   .tagline { font-size: 18px; font-style: italic; font-weight: bold; color: #ffe066; }
 
-  nav {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
+  nav { display: flex; gap: 10px; align-items: center; }
 
   button {
     padding: 8px 14px;
@@ -49,7 +40,6 @@
     box-shadow: 1px 1px 0 #333;
     transition: background 0.2s;
   }
-
   button:hover { background: #ffff66; }
 
   main {
@@ -65,7 +55,6 @@
   }
 
   h1 { margin-bottom: 10px; }
-
   label { display: block; margin: 10px 0 5px; font-weight: bold; }
   input[type="text"], input[type="url"], input[type="date"], textarea, select {
     width: 100%;
@@ -74,9 +63,7 @@
     border: 2px solid #9966ff;
     border-radius: 4px;
   }
-
   textarea { resize: vertical; min-height: 60px; }
-
   #friends-container p { margin: 4px 0; }
 
   #profile-avatar {
@@ -84,13 +71,12 @@
     margin-top: 10px;
     margin-bottom: 15px;
   }
-
   #profile-avatar img {
     width: 150px;
     height: 150px;
     border-radius: 50%;
     object-fit: cover;
-    background: #ccc; /* grey placeholder */
+    background: #ccc;
   }
 </style>
 </head>
@@ -159,8 +145,12 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Replace this with your auth system’s current user ID
-const currentUserID = localStorage.getItem('userId') || 'YOUR_USER_ID_HERE';
+// Use the same stable userId as main page
+let currentUserID = localStorage.getItem('userId');
+if (!currentUserID) {
+  currentUserID = 'user_' + Date.now();
+  localStorage.setItem('userId', currentUserID);
+}
 
 const usernameInput = document.getElementById('username-input');
 const bioInput = document.getElementById('bio-input');
@@ -189,27 +179,31 @@ async function loadProfile() {
   main.style.background = wallpaperSelect.value;
   avatarPreview.src = data.avatarURL || 'https://via.placeholder.com/150';
 
+  // Render friends
   friendsContainer.innerHTML = '';
   if (data.friends) {
-    data.friends.forEach(async friendID => {
+    for (const friendID of data.friends) {
       const friendDoc = await db.collection('users').doc(friendID).get();
       if (friendDoc.exists) {
         const p = document.createElement('p');
         p.textContent = friendDoc.data().username;
         friendsContainer.appendChild(p);
       }
-    });
+    }
   }
 }
 
+// Update avatar preview
 avatarInput.addEventListener('input', () => {
   avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
 });
 
+// Update wallpaper preview
 wallpaperSelect.addEventListener('change', () => {
   main.style.background = wallpaperSelect.value;
 });
 
+// Save profile
 saveBtn.addEventListener('click', async () => {
   const newUsername = usernameInput.value.trim();
   if (!newUsername) return alert('Username cannot be empty.');
@@ -228,14 +222,15 @@ saveBtn.addEventListener('click', async () => {
   loadProfile();
 });
 
+// Back button
 document.getElementById('back-btn').addEventListener('click', () => {
   window.location.href = 'index.html';
 });
 
+// Initial load
 loadProfile();
 </script>
 </body>
 </html>
-
 
 
