@@ -53,7 +53,7 @@ button#submit-post:hover { background:#7a3fcc; }
 }
 .post img { width:40px; height:40px; border-radius:50%; object-fit:cover; }
 .post-content { display:flex; flex-direction:column; }
-.post-content .author a { text-decoration:none; color:#000080; font-weight:bold; }
+.post-content .author a { text-decoration:none; color:#000080; font-weight:bold; cursor:pointer; }
 .post-content .author a:hover { text-decoration:underline; }
 footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Courier New', monospace; color:#333; }
 </style>
@@ -71,7 +71,7 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
       <button class="filter-btn" data-filter="unseen">Unseen</button>
       <button class="filter-btn" data-filter="public">Public</button>
     </div>
-    <a id="profile-link" href="profile.html"><button id="profile-btn" title="Your Profile">👤</button></a>
+    <a href="profile.html"><button id="profile-btn" title="Your Profile">👤</button></a>
   </nav>
 </header>
 
@@ -111,19 +111,9 @@ let currentFilter = 'friends';
 // Load username from localStorage
 if(localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
 
-// Update profile link to current user
-const profileLink = document.getElementById('profile-link');
-if(localStorage.getItem('username')) {
-  profileLink.href = `profile.html?user=${encodeURIComponent(localStorage.getItem('username'))}`;
-}
-
 // Bad words filter
 const badWords=['nigger','retard','shit','nigga','fuck','bitch','bastard','crap','douche','dick','cunt','cock','pussy','tits','dickhead','slut','whore','motherfucker'];
-function sanitizeText(text){
-  let s=text;
-  badWords.forEach(w=>{s=s.replace(new RegExp(`\\b${w}\\b`,'gi'),'****')});
-  return s;
-}
+function sanitizeText(text){let s=text;badWords.forEach(w=>{s=s.replace(new RegExp(`\\b${w}\\b`,'gi'),'****')});return s;}
 
 // Format timestamps
 function formatTimestamp(date){
@@ -153,13 +143,7 @@ buttons.forEach(btn => {
 
 function filterPosts(filter){
   const posts = feed.querySelectorAll('.post');
-  posts.forEach(post => {
-    if(filter === 'public' || post.getAttribute('data-type') === filter) {
-      post.style.display='flex';
-    } else {
-      post.style.display='none';
-    }
-  });
+  posts.forEach(post => post.getAttribute('data-type') === filter || filter === 'public' ? post.style.display='flex' : post.style.display='none');
 }
 
 // Cache for user profiles
@@ -218,7 +202,10 @@ form.addEventListener('submit', async e=>{
   const avatarURL = localStorage.getItem('avatarURL') || 'https://via.placeholder.com/40';
 
   try {
+    // Ensure user exists
     await db.collection('users').doc(username).set({ username, avatarURL }, { merge: true });
+
+    // Add post
     await db.collection('posts').add({
       authorId: username,
       content: sanitizeText(content),
@@ -226,6 +213,7 @@ form.addEventListener('submit', async e=>{
       type: currentFilter,
       key: "MY_SECRET_KEY"
     });
+
     textarea.value='';
   } catch(err) {
     alert('Error posting: '+err.message);
