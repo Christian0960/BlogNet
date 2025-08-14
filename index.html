@@ -192,7 +192,7 @@ async function renderPosts(snapshot){
 db.collection('posts').orderBy('timestamp','desc').onSnapshot(renderPosts);
 
 // Handle new post
-form.addEventListener('submit', async e => {
+form.addEventListener('submit', async e=>{
   e.preventDefault();
   const content = textarea.value.trim();
   const username = usernameInput.value.trim() || 'friend_alpha';
@@ -205,18 +205,18 @@ form.addEventListener('submit', async e => {
     // Ensure user exists
     await db.collection('users').doc(username).set({ username, avatarURL }, { merge: true });
 
-    // Add post with secret key
+    // Add post
     await db.collection('posts').add({
       authorId: username,
       content: sanitizeText(content),
       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       type: currentFilter,
-      key: "MY_SECRET_KEY" // must match Firestore rules
+      key: "MY_SECRET_KEY"
     });
 
-    textarea.value = '';
+    textarea.value='';
   } catch(err) {
-    alert('Error posting: ' + err.message);
+    alert('Error posting: '+err.message);
   }
 });
 </script>
