@@ -110,7 +110,7 @@
   <h1>Edit Your Profile</h1>
 
   <div id="profile-avatar">
-    <img id="avatar-preview" src="" alt="Avatar">
+    <img id="avatar-preview" src="https://via.placeholder.com/150" alt="Avatar">
   </div>
 
   <label for="username-input">Username:</label>
@@ -159,7 +159,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-const currentUserID = 'YOUR_USER_ID_HERE';
+// Replace this with your auth system’s current user ID
+const currentUserID = localStorage.getItem('userId') || 'YOUR_USER_ID_HERE';
+
 const usernameInput = document.getElementById('username-input');
 const bioInput = document.getElementById('bio-input');
 const movieInput = document.getElementById('movie-input');
@@ -185,7 +187,7 @@ async function loadProfile() {
   avatarInput.value = data.avatarURL || '';
   wallpaperSelect.value = data.wallpaper || '#f0f4ff';
   main.style.background = wallpaperSelect.value;
-  avatarPreview.src = data.avatarURL || '';
+  avatarPreview.src = data.avatarURL || 'https://via.placeholder.com/150';
 
   friendsContainer.innerHTML = '';
   if (data.friends) {
@@ -201,7 +203,7 @@ async function loadProfile() {
 }
 
 avatarInput.addEventListener('input', () => {
-  avatarPreview.src = avatarInput.value || '';
+  avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
 });
 
 wallpaperSelect.addEventListener('change', () => {
@@ -226,44 +228,14 @@ saveBtn.addEventListener('click', async () => {
   loadProfile();
 });
 
-// Back button goes to homepage
 document.getElementById('back-btn').addEventListener('click', () => {
-  window.location.href = 'index.html'; // adjust if homepage has a different URL
-});
-
-  const userId = localStorage.getItem('username'); // Or auth UID
-
-db.collection('users').doc(userId).set({
-  username: document.getElementById('username').value.trim(),
-  bio: document.getElementById('bio').value.trim(),
-  birthday: document.getElementById('birthday').value,
-  favoriteMovie: document.getElementById('movie').value.trim(),
-  favoriteSong: document.getElementById('song').value.trim(),
-  avatarURL: currentAvatarURL, // set when uploaded
-  wallpaperColor: document.getElementById('wallpaper-color').value
-}, { merge: true }).then(() => {
-  alert('Profile updated!');
-});
-
-  const userId = localStorage.getItem('username');
-
-db.collection('users').doc(userId).get().then(doc => {
-  if (doc.exists) {
-    const data = doc.data();
-    document.getElementById('username').value = data.username || '';
-    document.getElementById('bio').value = data.bio || '';
-    document.getElementById('birthday').value = data.birthday || '';
-    document.getElementById('movie').value = data.favoriteMovie || '';
-    document.getElementById('song').value = data.favoriteSong || '';
-    if (data.avatarURL) {
-      document.getElementById('avatar').src = data.avatarURL;
-    }
-    document.body.style.backgroundColor = data.wallpaperColor || '#ffffff';
-  }
+  window.location.href = 'index.html';
 });
 
 loadProfile();
 </script>
 </body>
 </html>
+
+
 
