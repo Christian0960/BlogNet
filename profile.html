@@ -5,79 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Your Profile</title>
 <style>
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    color: #000080;
-    user-select: none;
-    background: #f0f4ff;
-  }
-
-  header {
-    background: linear-gradient(90deg, #3399ff, #9966ff);
-    padding: 20px 30px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-  }
-
-  .logo-container { display: flex; align-items: baseline; gap: 15px; }
-  .logo { font-size: 36px; font-weight: bold; color: #fff; }
-  .tagline { font-size: 18px; font-style: italic; font-weight: bold; color: #ffe066; }
-
-  nav { display: flex; gap: 10px; align-items: center; }
-
-  button {
-    padding: 8px 14px;
-    font-weight: bold;
-    border-radius: 3px;
-    border: none;
-    cursor: pointer;
-    color: #000080;
-    background: #ffcc00;
-    box-shadow: 1px 1px 0 #333;
-    transition: background 0.2s;
-  }
-  button:hover { background: #ffff66; }
-
-  main {
-    max-width: 700px;
-    margin: 30px auto;
-    padding: 20px;
-    background: #ffffffcc;
-    border: 3px solid #9966ff;
-    border-radius: 6px;
-    box-shadow: 0 4px 10px rgba(153,102,255,0.3);
-    position: relative;
-    transition: background 0.3s;
-  }
-
-  h1 { margin-bottom: 10px; }
-  label { display: block; margin: 10px 0 5px; font-weight: bold; }
-  input[type="text"], input[type="url"], input[type="date"], textarea, select {
-    width: 100%;
-    padding: 8px;
-    font-size: 14px;
-    border: 2px solid #9966ff;
-    border-radius: 4px;
-  }
-  textarea { resize: vertical; min-height: 60px; }
-  #friends-container p { margin: 4px 0; }
-
-  #profile-avatar {
-    max-width: 150px;
-    margin-top: 10px;
-    margin-bottom: 15px;
-  }
-  #profile-avatar img {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #ccc;
-  }
+  body { margin:0; font-family:Arial,sans-serif; color:#000080; user-select:none; background:#f0f4ff; }
+  header { background:linear-gradient(90deg,#3399ff,#9966ff); padding:20px 30px; box-shadow:0 3px 6px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+  .logo-container { display:flex; align-items:baseline; gap:15px; }
+  .logo { font-size:36px; font-weight:bold; color:#fff; }
+  .tagline { font-size:18px; font-style:italic; font-weight:bold; color:#ffe066; }
+  nav { display:flex; gap:10px; align-items:center; }
+  button { padding:8px 14px; font-weight:bold; border-radius:3px; border:none; cursor:pointer; color:#000080; background:#ffcc00; box-shadow:1px 1px 0 #333; transition:background 0.2s; }
+  button:hover { background:#ffff66; }
+  main { max-width:700px; margin:30px auto; padding:20px; background:#ffffffcc; border:3px solid #9966ff; border-radius:6px; box-shadow:0 4px 10px rgba(153,102,255,0.3); transition:background 0.3s; }
+  h1 { margin-bottom:10px; }
+  label { display:block; margin:10px 0 5px; font-weight:bold; }
+  input[type="text"], input[type="url"], input[type="date"], textarea, select { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; }
+  textarea { resize:vertical; min-height:60px; }
+  #friends-container p { margin:4px 0; }
+  #profile-avatar { max-width:150px; margin-top:10px; margin-bottom:15px; }
+  #profile-avatar img { width:150px; height:150px; border-radius:50%; object-fit:cover; background:#ccc; }
 </style>
 </head>
 <body>
@@ -134,6 +77,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
+// Firebase init
 const firebaseConfig = {
   apiKey: "AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
   authDomain: "the-blog-network.firebaseapp.com",
@@ -145,15 +89,14 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Use the same stable userId as main page
-<script>
-// Use stable userId for localStorage
+// Stable userId
 let currentUserID = localStorage.getItem('userId');
 if (!currentUserID) {
   currentUserID = 'user_' + Date.now();
   localStorage.setItem('userId', currentUserID);
 }
 
+// Elements
 const usernameInput = document.getElementById('username-input');
 const bioInput = document.getElementById('bio-input');
 const movieInput = document.getElementById('movie-input');
@@ -165,7 +108,7 @@ const saveBtn = document.getElementById('save-btn');
 const avatarPreview = document.getElementById('avatar-preview');
 const main = document.getElementById('profile-main');
 
-// Load profile from localStorage first
+// Load profile from localStorage
 function loadLocalProfile() {
   usernameInput.value = localStorage.getItem('username') || '';
   bioInput.value = localStorage.getItem('bio') || '';
@@ -178,7 +121,7 @@ function loadLocalProfile() {
   main.style.background = wallpaperSelect.value;
 }
 
-// Save to localStorage and Firestore
+// Save changes
 saveBtn.addEventListener('click', async () => {
   const username = usernameInput.value.trim();
   if (!username) return alert('Username cannot be empty.');
@@ -219,10 +162,8 @@ document.getElementById('back-btn').addEventListener('click', () => {
   window.location.href = 'index.html';
 });
 
+// Initial load
 loadLocalProfile();
 </script>
 </body>
 </html>
-
-
-
