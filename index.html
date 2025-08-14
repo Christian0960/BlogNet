@@ -1,55 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>The Blog Network</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f0f4ff url('https://www.transparenttextures.com/patterns/tileable-wood-print.png') repeat;
-      color: #000080;
-      user-select: none;
-    }
-
-    header {
-      background: linear-gradient(90deg, #3399ff, #9966ff);
-      padding: 20px 30px;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-    }
-
-    .logo { font-size: 36px; color: #fff; font-weight: bold; }
-    .tagline { font-size: 18px; color: #ffe066; font-style: italic; font-weight: bold; text-shadow: 1px 1px 0 #000033; }
-
-    nav { margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
-    button.filter-btn {
-      background: #ffcc00; border: 2px solid #000080; border-radius: 3px;
-      padding: 8px 14px; font-weight: bold; font-size: 12px;
-      cursor: pointer; color: #000080; box-shadow: 1px 1px 0 #333;
-      transition: background 0.2s; user-select: none;
-    }
-    button.filter-btn:hover { background: #ffff66; }
-    button.filter-btn.active { background: #ffff99; border-color: #330066; box-shadow: 2px 2px 4px #660099; }
-
-    main { max-width: 700px; margin: 25px auto; padding: 10px 20px; background: #ffffffcc; border: 3px solid #3399ff; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border-radius: 6px; min-height: 300px; }
-
-    form#post-form { max-width: 700px; margin: 0 auto 25px auto; background: #ffffffcc; padding: 15px 20px; border: 3px solid #9966ff; border-radius: 6px; box-shadow: 0 4px 8px rgba(153,102,255,0.5); display: flex; flex-direction: column; }
-    input#username, textarea#post-content { width: 100%; padding: 8px; font-size: 14px; border: 2px solid #9966ff; border-radius: 4px; }
-    textarea#post-content { min-height: 60px; resize: vertical; }
-    button#submit-post { margin-top: 8px; background: #9966ff; border: none; padding: 8px 16px; color: white; font-weight: bold; border-radius: 4px; cursor: pointer; align-self: flex-end; transition: background 0.3s; }
-    button#submit-post:hover { background: #7a3fcc; }
-
-    .post { border: 2px inset #99ccff; background: #e6f0ff; padding: 15px; margin-bottom: 20px; font-size: 13px; font-family: 'Courier New', monospace; box-shadow: 1px 1px 0 #99ccff; display: flex; align-items: center; gap: 10px; }
-    .post img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-    .post-content { display: flex; flex-direction: column; }
-
-    footer { text-align: center; margin: 20px auto; font-size: 12px; font-family: 'Courier New', monospace; color: #333; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Blog Network</title>
+<style>
+body { margin:0; font-family:Arial,sans-serif; background:#f0f4ff url('https://www.transparenttextures.com/patterns/tileable-wood-print.png') repeat; color:#000080; user-select:none; }
+header { background:linear-gradient(90deg,#3399ff,#9966ff); padding:20px 30px; box-shadow:0 3px 6px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.logo { font-size:36px; color:#fff; font-weight:bold; }
+.tagline { font-size:18px; color:#ffe066; font-style:italic; font-weight:bold; text-shadow:1px 1px 0 #000033; }
+nav { margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; }
+button.filter-btn { background:#ffcc00; border:2px solid #000080; border-radius:3px; padding:8px 14px; font-weight:bold; font-size:12px; cursor:pointer; color:#000080; box-shadow:1px 1px 0 #333; transition:background 0.2s; user-select:none; }
+button.filter-btn:hover { background:#ffff66; }
+button.filter-btn.active { background:#ffff99; border-color:#330066; box-shadow:2px 2px 4px #660099; }
+main { max-width:700px; margin:25px auto; padding:10px 20px; background:#ffffffcc; border:3px solid #3399ff; box-shadow:0 4px 10px rgba(0,0,0,0.2); border-radius:6px; min-height:300px; }
+form#post-form { max-width:700px; margin:0 auto 25px auto; background:#ffffffcc; padding:15px 20px; border:3px solid #9966ff; border-radius:6px; box-shadow:0 4px 8px rgba(153,102,255,0.5); display:flex; flex-direction:column; }
+input#username, textarea#post-content { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; }
+textarea#post-content { min-height:60px; resize:vertical; }
+button#submit-post { margin-top:8px; background:#9966ff; border:none; padding:8px 16px; color:white; font-weight:bold; border-radius:4px; cursor:pointer; align-self:flex-end; transition:background 0.3s; }
+button#submit-post:hover { background:#7a3fcc; }
+.post { border:2px inset #99ccff; background:#e6f0ff; padding:15px; margin-bottom:20px; font-size:13px; font-family:'Courier New', monospace; box-shadow:1px 1px 0 #99ccff; display:flex; align-items:center; gap:10px; }
+.post img { width:40px; height:40px; border-radius:50%; object-fit:cover; }
+.post-content { display:flex; flex-direction:column; }
+footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Courier New', monospace; color:#333; }
+</style>
 </head>
 <body>
 <header>
@@ -79,16 +53,8 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
-  authDomain: "the-blog-network.firebaseapp.com",
-  projectId: "the-blog-network",
-  storageBucket: "the-blog-network.appspot.com",
-  messagingSenderId: "857847462134",
-  appId: "1:857847462134:web:a22e9a6467a230632b94d7"
-};
+const firebaseConfig = { apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0", authDomain:"the-blog-network.firebaseapp.com", projectId:"the-blog-network", storageBucket:"the-blog-network.appspot.com", messagingSenderId:"857847462134", appId:"1:857847462134:web:a22e9a6467a230632b94d7" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
@@ -99,104 +65,89 @@ const textarea = document.getElementById('post-content');
 const usernameInput = document.getElementById('username');
 let currentFilter = 'friends';
 
-if (localStorage.getItem('username')) {
-  usernameInput.value = localStorage.getItem('username');
-}
-
-// Filter posts
-function filterPosts(filter) {
-  const posts = feed.querySelectorAll('.post');
-  posts.forEach(post => {
-    if (filter === 'public' || post.getAttribute('data-type') === filter) post.style.display='flex';
-    else post.style.display='none';
-  });
-}
+if(localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
 
 buttons.forEach(btn => {
-  btn.addEventListener('click', () => {
-    buttons.forEach(b => b.classList.remove('active'));
+  btn.addEventListener('click', ()=>{
+    buttons.forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     currentFilter = btn.getAttribute('data-filter');
     filterPosts(currentFilter);
   });
 });
 
-// Timestamp formatting
-function formatTimestamp(date) {
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return 'just now';
-  if (diffMins === 1) return '1 minute ago';
-  if (diffMins < 60) return `${diffMins} minutes ago`;
-  const diffHrs = Math.floor(diffMins / 60);
-  if (diffHrs === 1) return '1 hour ago';
-  if (diffHrs < 24) return `${diffHrs} hours ago`;
-  const diffDays = Math.floor(diffHrs / 24);
-  if (diffDays === 1) return '1 day ago';
+function filterPosts(filter){
+  const posts = feed.querySelectorAll('.post');
+  posts.forEach(post=>post.getAttribute('data-type')===filter||filter==='public'?post.style.display='flex':post.style.display='none');
+}
+
+function formatTimestamp(date){
+  const now=new Date();
+  const diffMs=now-date;
+  const diffMins=Math.floor(diffMs/60000);
+  if(diffMins<1) return'just now';
+  if(diffMins===1) return'1 minute ago';
+  if(diffMins<60) return `${diffMins} minutes ago`;
+  const diffHrs=Math.floor(diffMins/60);
+  if(diffHrs===1) return '1 hour ago';
+  if(diffHrs<24) return `${diffHrs} hours ago`;
+  const diffDays=Math.floor(diffHrs/24);
+  if(diffDays===1) return '1 day ago';
   return `${diffDays} days ago`;
 }
 
-const badWords = ['nigger','retard','shit','nigga','fuck','bitch','bastard','crap','douche','dick','cunt','cock','pussy','tits','dickhead','slut','whore','motherfucker'];
-function sanitizeText(text) {
-  let sanitized = text;
-  badWords.forEach(word => {
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    sanitized = sanitized.replace(regex, '****');
-  });
-  return sanitized;
-}
+const badWords=['nigger','retard','shit','nigga','fuck','bitch','bastard','crap','douche','dick','cunt','cock','pussy','tits','dickhead','slut','whore','motherfucker'];
+function sanitizeText(text){let s=text;badWords.forEach(w=>{s=s.replace(new RegExp(`\\b${w}\\b`,'gi'),'****')});return s;}
 
-// Post submission
-form.addEventListener('submit', async e => {
+form.addEventListener('submit',async e=>{
   e.preventDefault();
-  const rawContent = textarea.value.trim();
-  let username = usernameInput.value.trim() || 'friend_alpha';
-  if (!rawContent) return alert('Please write something before posting!');
-  localStorage.setItem('username', username);
+  const rawContent=textarea.value.trim();
+  const username=usernameInput.value.trim()||'friend_alpha';
+  if(!rawContent) return alert('Please write something before posting!');
+  localStorage.setItem('username',username);
 
-  const content = sanitizeText(rawContent);
+  await db.collection('users').doc(username).set({ username },{ merge:true });
 
-  // Get or create a Firestore user document
-  const userDocRef = db.collection('users').doc(username);
-  await userDocRef.set({ username }, { merge: true });
-
-  db.collection('posts').add({
-    authorId: username,
-    content,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    type: currentFilter
-  }).then(() => {
-    textarea.value='';
-  }).catch(err => { alert('Error posting: ' + err.message); });
+  db.collection('posts').add({ authorId:username, content:sanitizeText(rawContent), timestamp:firebase.firestore.FieldValue.serverTimestamp(), type:currentFilter }).then(()=>textarea.value='').catch(err=>alert('Error posting: '+err.message));
 });
 
-// Render posts with live profile info
-async function renderPosts(snapshot) {
+// Cache for user profiles
+const userCache={};
+
+async function renderPosts(snapshot){
   feed.innerHTML='';
-  for (const doc of snapshot.docs) {
-    const post = doc.data();
-    const authorId = post.authorId || 'friend_alpha';
-    const userDoc = await db.collection('users').doc(authorId).get();
-    const userData = userDoc.exists ? userDoc.data() : { username: authorId, avatarURL: 'https://via.placeholder.com/40' };
+  const postDocs=snapshot.docs;
+  const missingUsers=[];
+  postDocs.forEach(doc=>{const data=doc.data();if(data.authorId&&!userCache[data.authorId]&&!missingUsers.includes(data.authorId)) missingUsers.push(data.authorId);});
 
-    const article = document.createElement('article');
+  // fetch missing user profiles
+  if(missingUsers.length>0){
+    const usersSnap=await db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',missingUsers).get();
+    usersSnap.forEach(u=>userCache[u.id]=u.data());
+  }
+
+  postDocs.forEach(doc=>{
+    const post=doc.data();
+    const authorId=post.authorId||'friend_alpha';
+    const userData=userCache[authorId]||{ username:authorId, avatarURL:'https://via.placeholder.com/40' };
+    const article=document.createElement('article');
     article.className='post';
-    article.setAttribute('data-type', post.type || 'friends');
-
+    article.setAttribute('data-type',post.type||'friends');
     article.innerHTML=`
-      <img src="${userData.avatarURL || 'https://via.placeholder.com/40'}" alt="avatar">
+      <img src="${userData.avatarURL||'https://via.placeholder.com/40'}" alt="avatar">
       <div class="post-content">
         <div class="author">${userData.username}</div>
-        <div class="timestamp">${post.timestamp ? formatTimestamp(post.timestamp.toDate()) : ''}</div>
+        <div class="timestamp">${post.timestamp?formatTimestamp(post.timestamp.toDate()):''}</div>
         <div class="content">${post.content}</div>
       </div>
     `;
     feed.appendChild(article);
-  }
+  });
+
   filterPosts(currentFilter);
 }
 
+// Listen for post changes
 db.collection('posts').orderBy('timestamp','desc').onSnapshot(renderPosts);
 filterPosts(currentFilter);
 </script>
