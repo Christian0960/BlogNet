@@ -187,27 +187,35 @@ async function renderPosts(snapshot){
 // Listen for post changes
 db.collection('posts').orderBy('timestamp','desc').onSnapshot(renderPosts);
 
-// Handle new post submission
-form.addEventListener('submit', async e=>{
+form.addEventListener('submit', async e => {
   e.preventDefault();
   const content = textarea.value.trim();
   const username = usernameInput.value.trim() || 'friend_alpha';
-  if(!content) return alert('Please write something before posting!');
+  if (!content) return alert('Please write something before posting!');
 
+  // Save username locally
   localStorage.setItem('username', username);
   const avatarURL = localStorage.getItem('avatarURL') || 'https://via.placeholder.com/40';
 
-  // Ensure user exists
-  await db.collection('users').doc(username).set({ username, avatarURL }, { merge:true });
+  try {
+    // Ensure user exists first
+    await db.collection('users').doc(username).set({ username, avatarURL }, { merge: true });
 
-  // Add post
-  db.collection('posts').add({
-    authorId: username,
-    content: sanitizeText(content),
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    type: currentFilter
-  }).then(()=>textarea.value='').catch(err=>alert('Error posting: '+err.message));
+    // Add post after user is confirmed
+    await db.collection('posts').add({
+      authorId: username,
+      content: sanitizeText(content),
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      type: 'friends' // or default type
+    });
+
+    textarea.value = ''; // clear textarea
+  } catch(err) {
+    alert('Error posting: ' + err.message);
+  }
 });
+
 </script>
 </body>
 </html>
+
