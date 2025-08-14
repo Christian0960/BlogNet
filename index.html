@@ -288,8 +288,20 @@
       });
     });
 
+    const userId = localStorage.getItem('username');
+
+db.collection('users').doc(userId).get().then(doc => {
+  if (doc.exists) {
+    const data = doc.data();
+    // Example: change greeting
+    document.querySelector('.tagline').textContent = `Welcome, ${data.username}`;
+  }
+});
+
+
     filterPosts(currentFilter);
   </script>
 </body>
 </html>
+
 
