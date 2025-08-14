@@ -63,7 +63,34 @@ const feed = document.getElementById('feed');
 const form = document.getElementById('post-form');
 const textarea = document.getElementById('post-content');
 const usernameInput = document.getElementById('username');
-let currentFilter = 'friends';
+
+// --- START: Use profile info from localStorage ---
+if(localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const content = textarea.value.trim();
+  const username = usernameInput.value.trim() || 'friend_alpha';
+  if (!content) return alert('Please write something before posting!');
+
+  // Save username locally
+  localStorage.setItem('username', username);
+
+  // Ensure user exists in Firestore
+  const avatarURL = localStorage.getItem('avatarURL') || 'https://via.placeholder.com/40';
+  await db.collection('users').doc(username).set({ username, avatarURL }, { merge: true });
+
+  // Save post
+  db.collection('posts').add({
+    authorId: username,
+    content: sanitizeText(content),
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    type: currentFilter
+  }).then(() => textarea.value = '')
+    .catch(err => alert('Error posting: '+err.message));
+});
+// --- END ---
+
 
 if(localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
 
@@ -153,3 +180,4 @@ filterPosts(currentFilter);
 </script>
 </body>
 </html>
+
