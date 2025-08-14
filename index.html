@@ -5,7 +5,144 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>The Blog Network</title>
   <style>
-    /* your CSS unchanged */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif; /* subtitle font */
+      background: #f0f4ff url('https://www.transparenttextures.com/patterns/tileable-wood-print.png') repeat;
+      color: #000080;
+      user-select: none;
+    }
+
+    header {
+      background: linear-gradient(90deg, #3399ff, #9966ff);
+      padding: 20px 30px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      font-family: Arial, sans-serif; /* match subtitle font */
+      font-size: 36px; /* larger than subtitle */
+      color: #fff;
+      font-weight: bold;
+      user-select: none;
+    }
+
+    .tagline {
+      font-family: Arial, sans-serif;
+      font-size: 18px;
+      color: #ffe066;
+      font-style: italic;
+      font-weight: bold;
+      margin-left: 10px;
+      flex-grow: 1;
+      text-shadow: 1px 1px 0 #000033;
+    }
+
+    nav {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button.filter-btn {
+      background: #ffcc00;
+      border: 2px solid #000080;
+      border-radius: 3px;
+      padding: 8px 14px;
+      font-weight: bold;
+      font-size: 12px;
+      cursor: pointer;
+      color: #000080;
+      box-shadow: 1px 1px 0 #333333;
+      transition: background 0.2s;
+      user-select: none;
+    }
+
+    button.filter-btn:hover { background: #ffff66; }
+    button.filter-btn.active { background: #ffff99; border-color: #330066; box-shadow: 2px 2px 4px #660099; }
+
+    main {
+      max-width: 700px;
+      margin: 25px auto;
+      padding: 10px 20px;
+      background: #ffffffcc;
+      border: 3px solid #3399ff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      border-radius: 6px;
+      min-height: 300px;
+    }
+
+    form#post-form {
+      max-width: 700px;
+      margin: 0 auto 25px auto;
+      background: #ffffffcc;
+      padding: 15px 20px;
+      border: 3px solid #9966ff;
+      border-radius: 6px;
+      box-shadow: 0 4px 8px rgba(153, 102, 255, 0.5);
+      display: flex;
+      flex-direction: column;
+    }
+
+    input#username {
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 8px;
+      font-size: 14px;
+      border: 2px solid #9966ff;
+      border-radius: 4px;
+    }
+
+    textarea#post-content {
+      width: 100%;
+      min-height: 60px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      padding: 8px;
+      border: 2px solid #9966ff;
+      border-radius: 4px;
+      resize: vertical;
+    }
+
+    button#submit-post {
+      margin-top: 8px;
+      background: #9966ff;
+      border: none;
+      padding: 8px 16px;
+      color: white;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s;
+      align-self: flex-end;
+    }
+
+    button#submit-post:hover {
+      background: #7a3fcc;
+    }
+
+    .post {
+      border: 2px inset #99ccff;
+      background: #e6f0ff;
+      padding: 15px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      font-family: 'Courier New', Courier, monospace;
+      box-shadow: 1px 1px 0 #99ccff;
+    }
+
+    footer {
+      text-align: center;
+      margin: 20px auto;
+      font-size: 12px;
+      font-family: 'Courier New', Courier, monospace; /* match posts */
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -151,18 +288,16 @@
       });
     });
 
-    // Load saved profile data for greeting
     const userId = localStorage.getItem('username');
-    if (userId) {
-      db.collection('users').doc(userId).get().then(doc => {
-        if (doc.exists) {
-          const data = doc.data();
-          document.querySelector('.tagline').textContent = `Welcome, ${data.username || userId}!`;
-        }
-      }).catch(err => {
-        console.error("Error loading profile:", err);
-      });
-    }
+
+db.collection('users').doc(userId).get().then(doc => {
+  if (doc.exists) {
+    const data = doc.data();
+    // Example: change greeting
+    document.querySelector('.tagline').textContent = `Welcome, ${data.username}`;
+  }
+});
+
 
     filterPosts(currentFilter);
   </script>
