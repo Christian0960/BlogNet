@@ -146,6 +146,8 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 // Use the same stable userId as main page
+<script>
+// Use stable userId for localStorage
 let currentUserID = localStorage.getItem('userId');
 if (!currentUserID) {
   currentUserID = 'user_' + Date.now();
@@ -160,66 +162,56 @@ const birthdayInput = document.getElementById('birthday-input');
 const avatarInput = document.getElementById('avatar-input');
 const wallpaperSelect = document.getElementById('wallpaper-select');
 const saveBtn = document.getElementById('save-btn');
-const friendsContainer = document.getElementById('friends-container');
 const avatarPreview = document.getElementById('avatar-preview');
 const main = document.getElementById('profile-main');
 
-async function loadProfile() {
-  const doc = await db.collection('users').doc(currentUserID).get();
-  if (!doc.exists) return;
-
-  const data = doc.data();
-  usernameInput.value = data.username || '';
-  bioInput.value = data.bio || '';
-  movieInput.value = data.favoriteMovie || '';
-  songInput.value = data.favoriteSong || '';
-  birthdayInput.value = data.birthday || '';
-  avatarInput.value = data.avatarURL || '';
-  wallpaperSelect.value = data.wallpaper || '#f0f4ff';
+// Load profile from localStorage first
+function loadLocalProfile() {
+  usernameInput.value = localStorage.getItem('username') || '';
+  bioInput.value = localStorage.getItem('bio') || '';
+  movieInput.value = localStorage.getItem('favoriteMovie') || '';
+  songInput.value = localStorage.getItem('favoriteSong') || '';
+  birthdayInput.value = localStorage.getItem('birthday') || '';
+  avatarInput.value = localStorage.getItem('avatarURL') || '';
+  wallpaperSelect.value = localStorage.getItem('wallpaper') || '#f0f4ff';
+  avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
   main.style.background = wallpaperSelect.value;
-  avatarPreview.src = data.avatarURL || 'https://via.placeholder.com/150';
-
-  // Render friends
-  friendsContainer.innerHTML = '';
-  if (data.friends) {
-    for (const friendID of data.friends) {
-      const friendDoc = await db.collection('users').doc(friendID).get();
-      if (friendDoc.exists) {
-        const p = document.createElement('p');
-        p.textContent = friendDoc.data().username;
-        friendsContainer.appendChild(p);
-      }
-    }
-  }
 }
 
-// Update avatar preview
-avatarInput.addEventListener('input', () => {
-  avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
-});
-
-// Update wallpaper preview
-wallpaperSelect.addEventListener('change', () => {
-  main.style.background = wallpaperSelect.value;
-});
-
-// Save profile
+// Save to localStorage and Firestore
 saveBtn.addEventListener('click', async () => {
-  const newUsername = usernameInput.value.trim();
-  if (!newUsername) return alert('Username cannot be empty.');
+  const username = usernameInput.value.trim();
+  if (!username) return alert('Username cannot be empty.');
 
-  await db.collection('users').doc(currentUserID).set({
-    username: newUsername,
+  const profileData = {
+    username,
     bio: bioInput.value.trim(),
     favoriteMovie: movieInput.value.trim(),
     favoriteSong: songInput.value.trim(),
     birthday: birthdayInput.value,
     avatarURL: avatarInput.value.trim(),
     wallpaper: wallpaperSelect.value
-  }, { merge: true });
+  };
+
+  // Save locally
+  for (const key in profileData) {
+    localStorage.setItem(key, profileData[key]);
+  }
+
+  // Save to Firestore
+  await db.collection('users').doc(currentUserID).set(profileData, { merge: true });
 
   alert('Profile updated!');
-  loadProfile();
+});
+
+// Avatar preview
+avatarInput.addEventListener('input', () => {
+  avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
+});
+
+// Wallpaper preview
+wallpaperSelect.addEventListener('change', () => {
+  main.style.background = wallpaperSelect.value;
 });
 
 // Back button
@@ -227,10 +219,10 @@ document.getElementById('back-btn').addEventListener('click', () => {
   window.location.href = 'index.html';
 });
 
-// Initial load
-loadProfile();
+loadLocalProfile();
 </script>
 </body>
 </html>
+
 
 
