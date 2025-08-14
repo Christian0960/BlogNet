@@ -202,12 +202,14 @@ form.addEventListener('submit', async e => {
     await db.collection('users').doc(username).set({ username, avatarURL }, { merge: true });
 
     // Add post after user is confirmed
-    await db.collection('posts').add({
-      authorId: username,
-      content: sanitizeText(content),
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      type: 'friends' // or default type
-    });
+  db.collection('posts').add({
+  authorId: username,
+  content: sanitizeText(content),
+  timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+  type: currentFilter,
+  key: "MY_SECRET_KEY" // must match your rules
+});
+
 
     textarea.value = ''; // clear textarea
   } catch(err) {
@@ -218,4 +220,5 @@ form.addEventListener('submit', async e => {
 </script>
 </body>
 </html>
+
 
