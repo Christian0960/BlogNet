@@ -63,37 +63,32 @@ const feed = document.getElementById('feed');
 const form = document.getElementById('post-form');
 const textarea = document.getElementById('post-content');
 const usernameInput = document.getElementById('username');
+let currentFilter = 'friends';
 
-// --- START: Use profile info from localStorage ---
+// Load username from localStorage
 if(localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
 
-form.addEventListener('submit', async e => {
-  e.preventDefault();
-  const content = textarea.value.trim();
-  const username = usernameInput.value.trim() || 'friend_alpha';
-  if (!content) return alert('Please write something before posting!');
+// Bad words filter
+const badWords=['nigger','retard','shit','nigga','fuck','bitch','bastard','crap','douche','dick','cunt','cock','pussy','tits','dickhead','slut','whore','motherfucker'];
+function sanitizeText(text){let s=text;badWords.forEach(w=>{s=s.replace(new RegExp(`\\b${w}\\b`,'gi'),'****')});return s;}
 
-  // Save username locally
-  localStorage.setItem('username', username);
+// Format timestamps
+function formatTimestamp(date){
+  const now=new Date();
+  const diffMs=now-date;
+  const diffMins=Math.floor(diffMs/60000);
+  if(diffMins<1) return 'just now';
+  if(diffMins===1) return '1 minute ago';
+  if(diffMins<60) return `${diffMins} minutes ago`;
+  const diffHrs=Math.floor(diffMins/60);
+  if(diffHrs===1) return '1 hour ago';
+  if(diffHrs<24) return `${diffHrs} hours ago`;
+  const diffDays=Math.floor(diffHrs/24);
+  if(diffDays===1) return '1 day ago';
+  return `${diffDays} days ago`;
+}
 
-  // Ensure user exists in Firestore
-  const avatarURL = localStorage.getItem('avatarURL') || 'https://via.placeholder.com/40';
-  await db.collection('users').doc(username).set({ username, avatarURL }, { merge: true });
-
-  // Save post
-  db.collection('posts').add({
-    authorId: username,
-    content: sanitizeText(content),
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    type: currentFilter
-  }).then(() => textarea.value = '')
-    .catch(err => alert('Error posting: '+err.message));
-});
-// --- END ---
-
-
-if(localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
-
+// Handle filter buttons
 buttons.forEach(btn => {
   btn.addEventListener('click', ()=>{
     buttons.forEach(b=>b.classList.remove('active'));
@@ -105,63 +100,37 @@ buttons.forEach(btn => {
 
 function filterPosts(filter){
   const posts = feed.querySelectorAll('.post');
-  posts.forEach(post=>post.getAttribute('data-type')===filter||filter==='public'?post.style.display='flex':post.style.display='none');
+  posts.forEach(post => post.getAttribute('data-type') === filter || filter === 'public' ? post.style.display='flex' : post.style.display='none');
 }
-
-function formatTimestamp(date){
-  const now=new Date();
-  const diffMs=now-date;
-  const diffMins=Math.floor(diffMs/60000);
-  if(diffMins<1) return'just now';
-  if(diffMins===1) return'1 minute ago';
-  if(diffMins<60) return `${diffMins} minutes ago`;
-  const diffHrs=Math.floor(diffMins/60);
-  if(diffHrs===1) return '1 hour ago';
-  if(diffHrs<24) return `${diffHrs} hours ago`;
-  const diffDays=Math.floor(diffHrs/24);
-  if(diffDays===1) return '1 day ago';
-  return `${diffDays} days ago`;
-}
-
-const badWords=['nigger','retard','shit','nigga','fuck','bitch','bastard','crap','douche','dick','cunt','cock','pussy','tits','dickhead','slut','whore','motherfucker'];
-function sanitizeText(text){let s=text;badWords.forEach(w=>{s=s.replace(new RegExp(`\\b${w}\\b`,'gi'),'****')});return s;}
-
-form.addEventListener('submit',async e=>{
-  e.preventDefault();
-  const rawContent=textarea.value.trim();
-  const username=usernameInput.value.trim()||'friend_alpha';
-  if(!rawContent) return alert('Please write something before posting!');
-  localStorage.setItem('username',username);
-
-  await db.collection('users').doc(username).set({ username },{ merge:true });
-
-  db.collection('posts').add({ authorId:username, content:sanitizeText(rawContent), timestamp:firebase.firestore.FieldValue.serverTimestamp(), type:currentFilter }).then(()=>textarea.value='').catch(err=>alert('Error posting: '+err.message));
-});
 
 // Cache for user profiles
-const userCache={};
+const userCache = {};
 
+// Render posts
 async function renderPosts(snapshot){
   feed.innerHTML='';
-  const postDocs=snapshot.docs;
-  const missingUsers=[];
-  postDocs.forEach(doc=>{const data=doc.data();if(data.authorId&&!userCache[data.authorId]&&!missingUsers.includes(data.authorId)) missingUsers.push(data.authorId);});
+  const postDocs = snapshot.docs;
+  const missingUsers = [];
 
-  // fetch missing user profiles
-  if(missingUsers.length>0){
-    const usersSnap=await db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',missingUsers).get();
+  postDocs.forEach(doc=>{
+    const data = doc.data();
+    if(data.authorId && !userCache[data.authorId] && !missingUsers.includes(data.authorId)) missingUsers.push(data.authorId);
+  });
+
+  if(missingUsers.length > 0){
+    const usersSnap = await db.collection('users').where(firebase.firestore.FieldPath.documentId(), 'in', missingUsers).get();
     usersSnap.forEach(u=>userCache[u.id]=u.data());
   }
 
   postDocs.forEach(doc=>{
-    const post=doc.data();
-    const authorId=post.authorId||'friend_alpha';
-    const userData=userCache[authorId]||{ username:authorId, avatarURL:'https://via.placeholder.com/40' };
-    const article=document.createElement('article');
+    const post = doc.data();
+    const authorId = post.authorId || 'friend_alpha';
+    const userData = userCache[authorId] || { username: authorId, avatarURL: 'https://via.placeholder.com/40' };
+    const article = document.createElement('article');
     article.className='post';
-    article.setAttribute('data-type',post.type||'friends');
+    article.setAttribute('data-type', post.type || 'friends');
     article.innerHTML=`
-      <img src="${userData.avatarURL||'https://via.placeholder.com/40'}" alt="avatar">
+      <img src="${userData.avatarURL}" alt="avatar">
       <div class="post-content">
         <div class="author">${userData.username}</div>
         <div class="timestamp">${post.timestamp?formatTimestamp(post.timestamp.toDate()):''}</div>
@@ -176,8 +145,28 @@ async function renderPosts(snapshot){
 
 // Listen for post changes
 db.collection('posts').orderBy('timestamp','desc').onSnapshot(renderPosts);
-filterPosts(currentFilter);
+
+// Handle new post submission
+form.addEventListener('submit', async e=>{
+  e.preventDefault();
+  const content = textarea.value.trim();
+  const username = usernameInput.value.trim() || 'friend_alpha';
+  if(!content) return alert('Please write something before posting!');
+
+  localStorage.setItem('username', username);
+  const avatarURL = localStorage.getItem('avatarURL') || 'https://via.placeholder.com/40';
+
+  // Ensure user exists
+  await db.collection('users').doc(username).set({ username, avatarURL }, { merge:true });
+
+  // Add post
+  db.collection('posts').add({
+    authorId: username,
+    content: sanitizeText(content),
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    type: currentFilter
+  }).then(()=>textarea.value='').catch(err=>alert('Error posting: '+err.message));
+});
 </script>
 </body>
 </html>
-
