@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Profile</title>
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    color: #000080;
+    user-select: none;
+    background: #f0f4ff;
+  }
+
+  header {
+    background: linear-gradient(90deg, #3399ff, #9966ff);
+    padding: 20px 30px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .logo-container {
+    display: flex;
+    align-items: baseline;
+    gap: 15px;
+  }
+
+  .logo { font-size: 36px; font-weight: bold; color: #fff; }
+  .tagline { font-size: 18px; font-style: italic; font-weight: bold; color: #ffe066; }
+
+  nav {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  button {
+    padding: 8px 14px;
+    font-weight: bold;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+    color: #000080;
+    background: #ffcc00;
+    box-shadow: 1px 1px 0 #333;
+    transition: background 0.2s;
+  }
+
+  button:hover { background: #ffff66; }
+
+  main {
+    max-width: 700px;
+    margin: 30px auto;
+    padding: 20px;
+    background: #ffffffcc;
+    border: 3px solid #9966ff;
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(153,102,255,0.3);
+    position: relative;
+    transition: background 0.3s;
+  }
+
+  h1 { margin-bottom: 10px; }
+
+  label { display: block; margin: 10px 0 5px; font-weight: bold; }
+  input[type="text"], input[type="url"], input[type="date"], textarea, select {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+    border: 2px solid #9966ff;
+    border-radius: 4px;
+  }
+
+  textarea { resize: vertical; min-height: 60px; }
+
+  #friends-container p { margin: 4px 0; }
+
+  #profile-avatar {
+    max-width: 150px;
+    margin-top: 10px;
+    margin-bottom: 15px;
+  }
+
+  #profile-avatar img {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #ccc; /* grey placeholder */
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-container">
+    <div class="logo">THE BLOG NETWORK</div>
+    <div class="tagline">Chat with others!</div>
+  </div>
+  <nav>
+    <button id="back-btn">⬅ Back</button>
+  </nav>
+</header>
+
+<main id="profile-main">
+  <h1>Edit Your Profile</h1>
+
+  <div id="profile-avatar">
+    <img id="avatar-preview" src="" alt="Avatar">
+  </div>
+
+  <label for="username-input">Username:</label>
+  <input type="text" id="username-input">
+
+  <label for="bio-input">Bio:</label>
+  <textarea id="bio-input"></textarea>
+
+  <label for="movie-input">Favorite Movie:</label>
+  <input type="text" id="movie-input" placeholder="Optional">
+
+  <label for="song-input">Favorite Song:</label>
+  <input type="text" id="song-input" placeholder="Optional">
+
+  <label for="birthday-input">Birthday:</label>
+  <input type="date" id="birthday-input">
+
+  <label for="avatar-input">Profile Picture (URL):</label>
+  <input type="url" id="avatar-input" placeholder="Paste image URL or leave blank">
+
+  <label for="wallpaper-select">Profile Wallpaper:</label>
+  <select id="wallpaper-select">
+    <option value="#f0f4ff">Light Blue</option>
+    <option value="#fff4f0">Light Orange</option>
+    <option value="#f0fff4">Light Green</option>
+    <option value="#f4f0ff">Light Purple</option>
+  </select>
+
+  <button id="save-btn">Save Changes</button>
+
+  <h2>Friends</h2>
+  <div id="friends-container"></div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
+  authDomain: "the-blog-network.firebaseapp.com",
+  projectId: "the-blog-network",
+  storageBucket: "the-blog-network.appspot.com",
+  messagingSenderId: "857847462134",
+  appId: "1:857847462134:web:a22e9a6467a230632b94d7"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const currentUserID = 'YOUR_USER_ID_HERE';
+const usernameInput = document.getElementById('username-input');
+const bioInput = document.getElementById('bio-input');
+const movieInput = document.getElementById('movie-input');
+const songInput = document.getElementById('song-input');
+const birthdayInput = document.getElementById('birthday-input');
+const avatarInput = document.getElementById('avatar-input');
+const wallpaperSelect = document.getElementById('wallpaper-select');
+const saveBtn = document.getElementById('save-btn');
+const friendsContainer = document.getElementById('friends-container');
+const avatarPreview = document.getElementById('avatar-preview');
+const main = document.getElementById('profile-main');
+
+async function loadProfile() {
+  const doc = await db.collection('users').doc(currentUserID).get();
+  if (!doc.exists) return;
+
+  const data = doc.data();
+  usernameInput.value = data.username || '';
+  bioInput.value = data.bio || '';
+  movieInput.value = data.favoriteMovie || '';
+  songInput.value = data.favoriteSong || '';
+  birthdayInput.value = data.birthday || '';
+  avatarInput.value = data.avatarURL || '';
+  wallpaperSelect.value = data.wallpaper || '#f0f4ff';
+  main.style.background = wallpaperSelect.value;
+  avatarPreview.src = data.avatarURL || '';
+
+  friendsContainer.innerHTML = '';
+  if (data.friends) {
+    data.friends.forEach(async friendID => {
+      const friendDoc = await db.collection('users').doc(friendID).get();
+      if (friendDoc.exists) {
+        const p = document.createElement('p');
+        p.textContent = friendDoc.data().username;
+        friendsContainer.appendChild(p);
+      }
+    });
+  }
+}
+
+avatarInput.addEventListener('input', () => {
+  avatarPreview.src = avatarInput.value || '';
+});
+
+wallpaperSelect.addEventListener('change', () => {
+  main.style.background = wallpaperSelect.value;
+});
+
+saveBtn.addEventListener('click', async () => {
+  const newUsername = usernameInput.value.trim();
+  if (!newUsername) return alert('Username cannot be empty.');
+
+  await db.collection('users').doc(currentUserID).set({
+    username: newUsername,
+    bio: bioInput.value.trim(),
+    favoriteMovie: movieInput.value.trim(),
+    favoriteSong: songInput.value.trim(),
+    birthday: birthdayInput.value,
+    avatarURL: avatarInput.value.trim(),
+    wallpaper: wallpaperSelect.value
+  }, { merge: true });
+
+  alert('Profile updated!');
+  loadProfile();
+});
+
+// Back button goes to homepage
+document.getElementById('back-btn').addEventListener('click', () => {
+  window.location.href = 'index.html'; // adjust if homepage has a different URL
+});
+
+loadProfile();
+</script>
+</body>
+</html>
