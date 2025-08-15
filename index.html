@@ -73,23 +73,37 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
 
-// AUTHENTICATION
-let currentUserID;
-firebase.auth().signInAnonymously().then(cred => {
-  currentUserID = cred.user.uid;
-}).catch(console.error);
-
-// FILTERS
+// ELEMENTS
 const buttons = document.querySelectorAll('.filter-btn');
 const feed = document.getElementById('feed');
 const form = document.getElementById('post-form');
 const textarea = document.getElementById('post-content');
 const usernameInput = document.getElementById('username');
+const submitBtn = document.getElementById('submit-post');
 let currentFilter = 'friends';
 
+// Lock submit until auth is ready
+submitBtn.disabled = true;
+submitBtn.textContent = 'Connecting…';
+
+// AUTH (ensure we have a UID before posting)
+let currentUserID = null;
+let formListenerAttached = false;
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    try { await auth.signInAnonymously(); } catch(e){ console.error(e); }
+    return;
+  }
+  currentUserID = user.uid;
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Post';
+  attachFormListenerOnce();
+});
+
 // Load username from localStorage
-if(localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
+if (localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
 
 // Bad words filter
 const badWords=['nigger','retard','shit','nigga','fuck','bitch','bastard','crap','douche','dick','cunt','cock','pussy','tits','dickhead','slut','whore','motherfucker'];
@@ -146,7 +160,7 @@ async function renderPosts(snapshot){
 
   postDocs.forEach(doc=>{
     const post = doc.data();
-    const authorId = post.authorId;
+    const authorId = post.authorId || 'unknown';
     const userData = userCache[authorId] || { username: 'Unknown', avatarURL:'https://via.placeholder.com/40' };
     const article = document.createElement('article');
     article.className='post';
@@ -168,34 +182,45 @@ async function renderPosts(snapshot){
 // Listen for posts
 db.collection('posts').orderBy('timestamp','desc').onSnapshot(renderPosts);
 
-// Handle new post
-form.addEventListener('submit', async e=>{
-  e.preventDefault();
-  const content = textarea.value.trim();
-  const username = usernameInput.value.trim() || 'friend_alpha';
-  if(!content) return alert('Please write something before posting!');
+// Attach form listener only after UID is ready
+function attachFormListenerOnce(){
+  if (formListenerAttached) return;
+  formListenerAttached = true;
 
-  localStorage.setItem('username', username);
-  const avatarURL = localStorage.getItem('avatarURL') || 'https://via.placeholder.com/40';
+  form.addEventListener('submit', async e=>{
+    e.preventDefault();
 
-  try{
-    // Create/Update user using unique ID
-    await db.collection('users').doc(currentUserID).set({ username, avatarURL }, { merge:true });
+    if (!currentUserID) {
+      alert('Still connecting… please try again.');
+      return;
+    }
 
-    // Add post tied to unique ID
-    await db.collection('posts').add({
-      authorId: currentUserID,
-      content: sanitizeText(content),
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      type: currentFilter,
-      key: "MY_SECRET_KEY"
-    });
+    const content = textarea.value.trim();
+    const username = usernameInput.value.trim() || 'friend_alpha';
+    if(!content) return alert('Please write something before posting!');
 
-    textarea.value='';
-  }catch(err){
-    alert('Error posting: '+err.message);
-  }
-});
+    localStorage.setItem('username', username);
+    const avatarURL = localStorage.getItem('avatarURL') || 'https://via.placeholder.com/40';
+
+    try{
+      // Create/Update user using unique UID (prevents name takeover)
+      await db.collection('users').doc(currentUserID).set({ username, avatarURL }, { merge:true });
+
+      // Add post tied to UID (authorId will never be undefined now)
+      await db.collection('posts').add({
+        authorId: currentUserID,
+        content: sanitizeText(content),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        type: currentFilter
+        // If your Firestore rules require a key, add: key: "YOUR_KEY_HERE"
+      });
+
+      textarea.value='';
+    }catch(err){
+      alert('Error posting: '+err.message);
+    }
+  });
+}
 </script>
 </body>
 </html>
