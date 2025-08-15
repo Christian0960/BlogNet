@@ -89,10 +89,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Stable userId
+// Use stable unique userId
 let currentUserID = localStorage.getItem('userId');
 if (!currentUserID) {
-  currentUserID = 'user_' + Date.now();
+  currentUserID = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
   localStorage.setItem('userId', currentUserID);
 }
 
@@ -108,17 +108,34 @@ const saveBtn = document.getElementById('save-btn');
 const avatarPreview = document.getElementById('avatar-preview');
 const main = document.getElementById('profile-main');
 
-// Load profile from localStorage
-function loadLocalProfile() {
-  usernameInput.value = localStorage.getItem('username') || '';
-  bioInput.value = localStorage.getItem('bio') || '';
-  movieInput.value = localStorage.getItem('favoriteMovie') || '';
-  songInput.value = localStorage.getItem('favoriteSong') || '';
-  birthdayInput.value = localStorage.getItem('birthday') || '';
-  avatarInput.value = localStorage.getItem('avatarURL') || '';
-  wallpaperSelect.value = localStorage.getItem('wallpaper') || '#f0f4ff';
-  avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
-  main.style.background = wallpaperSelect.value;
+// Load profile from Firestore if exists
+async function loadProfile() {
+  try {
+    const doc = await db.collection('users').doc(currentUserID).get();
+    if(doc.exists){
+      const data = doc.data();
+      usernameInput.value = data.username || '';
+      bioInput.value = data.bio || '';
+      movieInput.value = data.favoriteMovie || '';
+      songInput.value = data.favoriteSong || '';
+      birthdayInput.value = data.birthday || '';
+      avatarInput.value = data.avatarURL || '';
+      wallpaperSelect.value = data.wallpaper || '#f0f4ff';
+    } else {
+      // fallback to localStorage
+      usernameInput.value = localStorage.getItem('username') || '';
+      bioInput.value = localStorage.getItem('bio') || '';
+      movieInput.value = localStorage.getItem('favoriteMovie') || '';
+      songInput.value = localStorage.getItem('favoriteSong') || '';
+      birthdayInput.value = localStorage.getItem('birthday') || '';
+      avatarInput.value = localStorage.getItem('avatarURL') || '';
+      wallpaperSelect.value = localStorage.getItem('wallpaper') || '#f0f4ff';
+    }
+    avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
+    main.style.background = wallpaperSelect.value;
+  } catch(err){
+    console.error('Error loading profile:', err);
+  }
 }
 
 // Save changes
@@ -137,14 +154,18 @@ saveBtn.addEventListener('click', async () => {
   };
 
   // Save locally
-  for (const key in profileData) {
-    localStorage.setItem(key, profileData[key]);
+  for (const key in profileData) localStorage.setItem(key, profileData[key]);
+
+  // Save to Firestore using stable userId
+  try {
+    await db.collection('users').doc(currentUserID).set(profileData, { merge: true });
+    alert('Profile updated!');
+  } catch(err) {
+    alert('Error saving profile: ' + err.message);
   }
 
-  // Save to Firestore
-  await db.collection('users').doc(currentUserID).set(profileData, { merge: true });
-
-  alert('Profile updated!');
+  avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
+  main.style.background = wallpaperSelect.value;
 });
 
 // Avatar preview
@@ -163,7 +184,7 @@ document.getElementById('back-btn').addEventListener('click', () => {
 });
 
 // Initial load
-loadLocalProfile();
+loadProfile();
 </script>
 </body>
 </html>
