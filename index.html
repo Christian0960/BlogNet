@@ -190,3 +190,43 @@ async function renderPosts(snapshot){
         <div class="content">${post.content}</div>
       </div>
     `;
+    feed.appendChild(article);
+  });
+
+  filterPosts(currentFilter);
+}
+
+// Listen for posts in real-time
+db.collection('posts').orderBy('timestamp','desc').onSnapshot(renderPosts);
+
+// Handle new post
+form.addEventListener('submit', async e=>{
+  e.preventDefault();
+  const content = textarea.value.trim();
+  const username = usernameInput.value.trim() || 'friend_alpha';
+  if(!content) return alert('Please write something before posting!');
+
+  localStorage.setItem('username', username);
+  const avatarURL = localStorage.getItem('avatarURL') || 'https://via.placeholder.com/40';
+
+  try{
+    await db.collection('users').doc(currentUserID).set({
+      username: username,
+      avatarURL: avatarURL
+    }, { merge: true });
+
+    await db.collection('posts').add({
+      authorId: currentUserID,
+      content: sanitizeText(content),
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      type: currentFilter
+    });
+
+    textarea.value='';
+  } catch(err){
+    alert('Error posting: '+err.message);
+  }
+});
+</script>
+</body>
+</html>
