@@ -108,29 +108,18 @@ const saveBtn = document.getElementById('save-btn');
 const avatarPreview = document.getElementById('avatar-preview');
 const main = document.getElementById('profile-main');
 
-// Load profile from Firestore if exists
+// Load profile from Firestore using stable userId
 async function loadProfile() {
   try {
     const doc = await db.collection('users').doc(currentUserID).get();
-    if(doc.exists){
-      const data = doc.data();
-      usernameInput.value = data.username || '';
-      bioInput.value = data.bio || '';
-      movieInput.value = data.favoriteMovie || '';
-      songInput.value = data.favoriteSong || '';
-      birthdayInput.value = data.birthday || '';
-      avatarInput.value = data.avatarURL || '';
-      wallpaperSelect.value = data.wallpaper || '#f0f4ff';
-    } else {
-      // fallback to localStorage
-      usernameInput.value = localStorage.getItem('username') || '';
-      bioInput.value = localStorage.getItem('bio') || '';
-      movieInput.value = localStorage.getItem('favoriteMovie') || '';
-      songInput.value = localStorage.getItem('favoriteSong') || '';
-      birthdayInput.value = localStorage.getItem('birthday') || '';
-      avatarInput.value = localStorage.getItem('avatarURL') || '';
-      wallpaperSelect.value = localStorage.getItem('wallpaper') || '#f0f4ff';
-    }
+    const data = doc.exists ? doc.data() : {};
+    usernameInput.value = data.username || localStorage.getItem('username') || '';
+    bioInput.value = data.bio || localStorage.getItem('bio') || '';
+    movieInput.value = data.favoriteMovie || localStorage.getItem('favoriteMovie') || '';
+    songInput.value = data.favoriteSong || localStorage.getItem('favoriteSong') || '';
+    birthdayInput.value = data.birthday || localStorage.getItem('birthday') || '';
+    avatarInput.value = data.avatarURL || localStorage.getItem('avatarURL') || '';
+    wallpaperSelect.value = data.wallpaper || localStorage.getItem('wallpaper') || '#f0f4ff';
     avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
     main.style.background = wallpaperSelect.value;
   } catch(err){
@@ -138,7 +127,7 @@ async function loadProfile() {
   }
 }
 
-// Save changes
+// Save profile changes
 saveBtn.addEventListener('click', async () => {
   const username = usernameInput.value.trim();
   if (!username) return alert('Username cannot be empty.');
@@ -154,9 +143,9 @@ saveBtn.addEventListener('click', async () => {
   };
 
   // Save locally
-  for (const key in profileData) localStorage.setItem(key, profileData[key]);
+  Object.keys(profileData).forEach(key => localStorage.setItem(key, profileData[key]));
 
-  // Save to Firestore using stable userId
+  // Save to Firestore under stable userId
   try {
     await db.collection('users').doc(currentUserID).set(profileData, { merge: true });
     alert('Profile updated!');
