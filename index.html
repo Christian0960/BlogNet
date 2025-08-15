@@ -62,7 +62,7 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script>
-// CONFIG
+// Firebase config
 const firebaseConfig = {
   apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
   authDomain:"the-blog-network.firebaseapp.com",
@@ -74,46 +74,11 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// SIGN IN ANONYMOUSLY
-firebase.auth().signInAnonymously().catch(console.error);
-
-// FILTER BUTTONS
-const buttons = document.querySelectorAll('.filter-btn');
-const feed = document.getElementById('feed');
-const form = document.getElementById('post-form');
-const textarea = document.getElementById('post-content');
-const usernameInput = document.getElementById('username');
-let currentFilter = 'friends';
-
-buttons.forEach(btn => {
-  btn.addEventListener('click', () => {
-    buttons.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentFilter = btn.getAttribute('data-filter');
-    filterPosts(currentFilter);
-  });
-});
-
-function filterPosts(filter){
-  const posts = feed.querySelectorAll('.post');
-  posts.forEach(post => post.getAttribute('data-type') === filter || filter === 'public' ? post.style.display='flex' : post.style.display='none');
-}
-
-// USER ID
-let currentUserID = localStorage.getItem('userId');
-if (!currentUserID) {
-  currentUserID = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  localStorage.setItem('userId', currentUserID);
-}
-
-// Load username
-if(localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
-
-// BAD WORD FILTER
+// Bad words filter
 const badWords=['nigger','retard','shit','nigga','fuck','bitch','bastard','crap','douche','dick','cunt','cock','pussy','tits','dickhead','slut','whore','motherfucker'];
 function sanitizeText(text){let s=text;badWords.forEach(w=>{s=s.replace(new RegExp(`\\b${w}\\b`,'gi'),'****')});return s;}
 
-// TIMESTAMP
+// Timestamp formatting
 function formatTimestamp(date){
   const now=new Date();
   const diffMs=now-date;
@@ -129,27 +94,98 @@ function formatTimestamp(date){
   return `${diffDays} days ago`;
 }
 
-// POST RENDERING
+// UI Elements
+const buttons = document.querySelectorAll('.filter-btn');
+const feed = document.getElementById('feed');
+const form = document.getElementById('post-form');
+const textarea = document.getElementById('post-content');
+const usernameInput = document.getElementById('username');
+let currentFilter = 'friends';
+
+buttons.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    buttons.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.getAttribute('data-filter');
+    filterPosts(currentFilter);
+  });
+});
+
+function filterPosts(filter){
+  const posts = feed.querySelectorAll('.post');
+  posts.forEach(post => post.getAttribute('data-type') === filter || filter === 'public' ? post.style.display='flex' : post.style.display='none');
+}
+
+// Cache for user profiles
 const userCache = {};
+
+// Anonymous auth & main logic
+firebase.auth().signInAnonymously()
+  .then(userCred=>{
+    const currentUserID = userCred.user.uid;
+    localStorage.setItem('userId', currentUserID);
+
+    // Load saved username if available
+    if(localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
+
+    // Render posts
+    db.collection('posts').orderBy('timestamp','desc').onSnapshot(renderPosts);
+
+    // Handle new post
+    form.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const content = textarea.value.trim();
+      const username = usernameInput.value.trim() || 'friend_alpha';
+      if(!content) return alert('Please write something before posting!');
+
+      localStorage.setItem('username', username);
+      const avatarURL = localStorage.getItem('avatarURL') || 'https://via.placeholder.com/40';
+      const SECRET_KEY = "BLOGNET25";
+
+      try{
+        // Ensure user doc exists and matches UID
+        await db.collection('users').doc(currentUserID).set({
+          username: username,
+          avatarURL: avatarURL
+        }, { merge: true });
+
+        // Add post with key
+        await db.collection('posts').add({
+          authorId: currentUserID,
+          content: sanitizeText(content),
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          type: currentFilter,
+          key: SECRET_KEY
+        });
+
+        textarea.value='';
+      } catch(err){
+        alert('Error posting: '+err.message);
+      }
+    });
+
+  }).catch(console.error);
+
+// Render posts function
 async function renderPosts(snapshot){
   feed.innerHTML='';
   const postDocs = snapshot.docs;
   const missingUsers = [];
 
-  postDocs.forEach(doc => {
+  postDocs.forEach(doc=>{
     const data = doc.data();
     if(data.authorId && !userCache[data.authorId] && !missingUsers.includes(data.authorId)) missingUsers.push(data.authorId);
   });
 
-  if(missingUsers.length > 0){
-    const usersSnap = await db.collection('users').where(firebase.firestore.FieldPath.documentId(), 'in', missingUsers).get();
-    usersSnap.forEach(u => userCache[u.id]=u.data());
+  if(missingUsers.length>0){
+    const usersSnap = await db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',missingUsers).get();
+    usersSnap.forEach(u=>userCache[u.id]=u.data());
   }
 
-  postDocs.forEach(doc => {
+  postDocs.forEach(doc=>{
     const post = doc.data();
     const authorId = post.authorId;
-    const userData = userCache[authorId] || { username: 'Unknown', avatarURL: 'https://via.placeholder.com/40' };
+    const userData = userCache[authorId] || { username:'Unknown', avatarURL:'https://via.placeholder.com/40' };
     const article = document.createElement('article');
     article.className='post';
     article.setAttribute('data-type', post.type || 'friends');
@@ -166,44 +202,6 @@ async function renderPosts(snapshot){
 
   filterPosts(currentFilter);
 }
-
-// REAL-TIME POSTS
-db.collection('posts').orderBy('timestamp','desc').onSnapshot(renderPosts);
-
-// HANDLE NEW POST
-form.addEventListener('submit', async e => {
-  e.preventDefault();
-  const content = textarea.value.trim();
-  const username = usernameInput.value.trim() || 'friend_alpha';
-  if(!content) return alert('Please write something before posting!');
-
-  localStorage.setItem('username', username);
-  const avatarURL = localStorage.getItem('avatarURL') || 'https://via.placeholder.com/40';
-
-  const SECRET_KEY = "BLOGNET25"; // MUST MATCH FIRESTORE RULES
-
-  try{
-    // CREATE/UPDATE USER
-    await db.collection('users').doc(currentUserID).set({
-      username: username,
-      avatarURL: avatarURL
-    }, { merge: true });
-
-    // CREATE POST
-    await db.collection('posts').add({
-      authorId: currentUserID,
-      content: sanitizeText(content),
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      type: currentFilter,
-      key: SECRET_KEY
-    });
-
-    textarea.value='';
-  } catch(err){
-    alert('Error posting: '+err.message);
-  }
-});
 </script>
 </body>
 </html>
-
