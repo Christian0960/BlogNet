@@ -102,6 +102,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+  firebase.auth().signInAnonymously()
+  .then(() => console.log("Signed in anonymously"))
+  .catch(error => console.error(error));
+
 const buttons = document.querySelectorAll('.filter-btn');
 const feed = document.getElementById('feed');
 const form = document.getElementById('post-form');
@@ -230,3 +234,4 @@ form.addEventListener('submit', async e=>{
 </script>
 </body>
 </html>
+
