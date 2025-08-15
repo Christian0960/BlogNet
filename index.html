@@ -90,6 +90,7 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
+// Firebase init
 const firebaseConfig = {
   apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
   authDomain:"the-blog-network.firebaseapp.com",
@@ -107,6 +108,13 @@ const form = document.getElementById('post-form');
 const textarea = document.getElementById('post-content');
 const usernameInput = document.getElementById('username');
 let currentFilter = 'friends';
+
+// Generate stable unique ID for each user
+let currentUserID = localStorage.getItem('userId');
+if (!currentUserID) {
+  currentUserID = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  localStorage.setItem('userId', currentUserID);
+}
 
 // Load username from localStorage
 if(localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
@@ -167,8 +175,8 @@ async function renderPosts(snapshot){
 
   postDocs.forEach(doc=>{
     const post = doc.data();
-    const authorId = post.authorId || 'friend_alpha';
-    const userData = userCache[authorId] || { username: authorId, avatarURL: 'https://via.placeholder.com/40' };
+    const authorId = post.authorId;
+    const userData = userCache[authorId] || { username: 'Unknown', avatarURL: 'https://via.placeholder.com/40' };
     const article = document.createElement('article');
     article.className='post';
     article.setAttribute('data-type', post.type || 'friends');
@@ -182,44 +190,3 @@ async function renderPosts(snapshot){
         <div class="content">${post.content}</div>
       </div>
     `;
-    feed.appendChild(article);
-  });
-
-  filterPosts(currentFilter);
-}
-
-// Listen for posts
-db.collection('posts').orderBy('timestamp','desc').onSnapshot(renderPosts);
-
-// Handle new post
-form.addEventListener('submit', async e=>{
-  e.preventDefault();
-  const content = textarea.value.trim();
-  const username = usernameInput.value.trim() || 'friend_alpha';
-  if(!content) return alert('Please write something before posting!');
-
-  localStorage.setItem('username', username);
-  const avatarURL = localStorage.getItem('avatarURL') || 'https://via.placeholder.com/40';
-
-  try {
-    // Ensure user exists
-    await db.collection('users').doc(username).set({ username, avatarURL }, { merge: true });
-
-    // Add post
-    await db.collection('posts').add({
-      authorId: username,
-      content: sanitizeText(content),
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      type: currentFilter,
-      key: "MY_SECRET_KEY"
-    });
-
-    textarea.value='';
-  } catch(err) {
-    alert('Error posting: '+err.message);
-  }
-});
-</script>
-</body>
-</html>
-
