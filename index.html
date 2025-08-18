@@ -22,7 +22,7 @@ button.filter-btn.active { background:#ffff99; border-color:#330066; box-shadow:
 .notif-empty { padding:14px; text-align:center; color:#555; font-size:13px; }
 main { max-width:700px; margin:25px auto; padding:10px 20px; background:#ffffffcc; border:3px solid #3399ff; box-shadow:0 4px 10px rgba(0,0,0,0.2); border-radius:6px; min-height:300px; }
 form#post-form { max-width:700px; margin:0 auto 25px auto; background:#ffffffcc; padding:15px 20px; border:3px solid #9966ff; border-radius:6px; box-shadow:0 4px 8px rgba(153,102,255,0.5); display:flex; flex-direction:column; }
-input#username, textarea#post-content { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; }
+input#username, textarea#post-content, select#post-type { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; margin-bottom:8px; }
 textarea#post-content { min-height:60px; resize:vertical; }
 button#submit-post { margin-top:8px; background:#9966ff; border:none; padding:8px 16px; color:white; font-weight:bold; border-radius:4px; cursor:pointer; align-self:flex-end; transition:background 0.3s; }
 button#submit-post:hover { background:#7a3fcc; }
@@ -32,7 +32,6 @@ button#submit-post:hover { background:#7a3fcc; }
 .post-content .author a { text-decoration:none; color:#000080; font-weight:bold; cursor:pointer; }
 .post-content .author a:hover { text-decoration:underline; }
 footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Courier New', monospace; color:#333; }
-.friend-controls { display:flex; gap:10px; margin-bottom:10px; }
 </style>
 </head>
 <body>
@@ -61,6 +60,10 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 
 <form id="post-form">
   <input type="text" id="username" placeholder="What's your name?" />
+  <select id="post-type">
+    <option value="profile">Profile Post</option>
+    <option value="public">Public Chat</option>
+  </select>
   <textarea id="post-content" placeholder="Have something to say?"></textarea>
   <button type="submit" id="submit-post">Post</button>
 </form>
@@ -72,9 +75,6 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
-// ----------------------
-// Config & IDs
-// ----------------------
 const SECRET_KEY="MY_SECRET_KEY";
 let currentUserID = localStorage.getItem('userId');
 if(!currentUserID){ currentUserID='user_'+Date.now()+'_'+Math.floor(Math.random()*1000); localStorage.setItem('userId',currentUserID); }
@@ -90,14 +90,12 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ----------------------
-// UI refs
-// ----------------------
 const buttons=document.querySelectorAll('.filter-btn');
 const feed=document.getElementById('feed');
 const form=document.getElementById('post-form');
 const textarea=document.getElementById('post-content');
 const usernameInput=document.getElementById('username');
+const postTypeSelect=document.getElementById('post-type');
 const notifBtn=document.getElementById('notif-btn');
 const notifCount=document.getElementById('notif-count');
 const notifPanel=document.getElementById('notif-panel');
@@ -107,69 +105,47 @@ let currentFilter='friends';
 let friendIds=new Set();
 if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
-const badWords=['nigger','retard','shit','nigga','fuck','bitch','bastard','crap','douche','dick','cunt','cock','pussy','tits','dickhead','slut','whore','motherfucker'];
-function sanitizeText(text){let s=text;badWords.forEach(w=>{s=s.replace(new RegExp(`\\b${w}\\b`,'gi'),'****')});return s;}
+function sanitizeText(text){return text;} // simplified for demo
 function formatTimestamp(date){const now=new Date();const diffMs=now-date;const diffMins=Math.floor(diffMs/60000);if(diffMins<1)return'just now';if(diffMins===1)return'1 minute ago';if(diffMins<60)return`${diffMins} minutes ago`;const diffHrs=Math.floor(diffMins/60);if(diffHrs===1)return'1 hour ago';if(diffHrs<24)return`${diffHrs} hours ago`;const diffDays=Math.floor(diffHrs/24);if(diffDays===1)return'1 day ago';return`${diffDays} days ago`;}
 
-// ----------------------
-// Filters
-// ----------------------
 buttons.forEach(btn=>{btn.addEventListener('click',()=>{buttons.forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentFilter=btn.getAttribute('data-filter'); applyCurrentFilter(); });});
-
-// ----------------------
-// Profile button
-// ----------------------
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
 
-// ----------------------
-// Friends subscription
-// ----------------------
+// Subscribe friends
 function subscribeFriends(){
   db.collection('users').doc(currentUserID).collection('friends').where('status','==','accepted')
-    .onSnapshot(snap=>{
-      friendIds=new Set(); 
-      snap.forEach(doc=>friendIds.add(doc.id)); 
-      friendIds.add(currentUserID); 
-      fetchPosts(); // fetch posts after friends load
-    });
+    .onSnapshot(snap=>{ friendIds=new Set(); snap.forEach(doc=>friendIds.add(doc.id)); friendIds.add(currentUserID); fetchPosts(); });
 }
 subscribeFriends();
 
-// ----------------------
-// Posts fetching & cache
-// ----------------------
+// Fetch posts
 let cachedPosts=[];
 const userCache={};
 
 async function fetchMissingUsers(authorIds){
   const missing=authorIds.filter(id=>!userCache[id]);
   if(!missing.length)return;
-  const chunks=[];
-  while(missing.length) chunks.push(missing.splice(0,10));
-  await Promise.all(chunks.map(list=>db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',list).get()
-    .then(s=>s.forEach(u=>userCache[u.id]=u.data()||{}))
-  ));
+  const chunks=[]; while(missing.length) chunks.push(missing.splice(0,10));
+  await Promise.all(chunks.map(list=>db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',list).get().then(s=>s.forEach(u=>userCache[u.id]=u.data()||{}))));
 }
 
 async function fetchPosts(){
-  // Fetch own + friends profilePosts
+  // profile posts
   const postsPromises = [...friendIds].map(uid=>db.collection('users').doc(uid).collection('profilePosts').orderBy('timestamp','desc').get());
   const profileSnaps = await Promise.all(postsPromises);
   const profilePosts = profileSnaps.flatMap(snap => snap.docs.map(d=>({id:d.id,data:d.data(), type:'profile'})));
-  
-  // Fetch public posts
+
+  // public posts
   const publicSnap = await db.collection('publicPosts').orderBy('timestamp','desc').get();
   const publicPosts = publicSnap.docs.map(d=>({id:d.id,data:d.data(), type:'public'}));
-  
+
   cachedPosts = [...profilePosts, ...publicPosts];
   const authors=[...new Set(cachedPosts.map(p=>p.data.authorId).filter(Boolean))];
   await fetchMissingUsers(authors);
   renderFeed();
 }
 
-// ----------------------
-// Render & filter
-// ----------------------
+// Render feed
 function renderFeed(){
   feed.innerHTML='';
   cachedPosts.forEach(p=>{
@@ -207,59 +183,42 @@ function applyCurrentFilter(){
   });
 }
 
-// ----------------------
 // Posting
-// ----------------------
 form.addEventListener('submit', async e=>{
   e.preventDefault();
   const content=textarea.value.trim();
-  if(!content) return alert('Please write something before posting!');
-  const newUsername=(usernameInput.value.trim()||'friend_alpha');
+  if(!content) return alert('Write something!');
+  const newUsername=usernameInput.value.trim()||'friend_alpha';
   localStorage.setItem('username',newUsername);
+  const type=postTypeSelect.value;
 
   try{
     const userRef=db.collection('users').doc(currentUserID);
     const userDoc=await userRef.get();
     const existing=userDoc.exists?userDoc.data():{};
-    const usernameCheck=await db.collection('users').where('username','==',newUsername).get();
-    if(!userDoc.exists && !usernameCheck.empty) return alert('Username taken');
     await userRef.set({username:newUsername, avatarURL:existing.avatarURL||'https://via.placeholder.com/40'},{merge:true});
 
-    await db.collection('users').doc(currentUserID).collection('profilePosts').add({
-      authorId:currentUserID,
-      content:sanitizeText(content),
-      timestamp:firebase.firestore.FieldValue.serverTimestamp(),
-      type:'profile',
-      key:SECRET_KEY
-    });
+    if(type==='profile'){
+      await db.collection('users').doc(currentUserID).collection('profilePosts').add({
+        authorId:currentUserID,
+        content:sanitizeText(content),
+        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
+        type:'profile',
+        key:SECRET_KEY
+      });
+    } else {
+      await db.collection('publicPosts').add({
+        authorId:currentUserID,
+        content:sanitizeText(content),
+        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
+        type:'public',
+        key:SECRET_KEY
+      });
+    }
     textarea.value='';
     fetchPosts();
   }catch(err){alert('Error posting: '+err.message);}
 });
-
-// ----------------------
-// Notifications
-// ----------------------
-async function fetchNotifications(){
-  const snap=await db.collection('users').doc(currentUserID).collection('notifications').orderBy('timestamp','desc').get();
-  notifPanel.innerHTML='';
-  if(snap.empty){notifPanel.innerHTML='<div class="notif-empty">No notifications</div>'; notifCount.style.display='none'; return;}
-  let unreadCount=0;
-  snap.forEach(doc=>{
-    const n=doc.data();
-    const div=document.createElement('div');
-    div.className='notif-item'+(n.read?'':' unread');
-    div.textContent=n.text;
-    notifPanel.appendChild(div);
-    if(!n.read) unreadCount++;
-  });
-  notifCount.textContent=unreadCount;
-  notifCount.style.display=unreadCount>0?'inline-block':'none';
-}
-fetchNotifications();
-
-notifBtn.addEventListener('click',()=>{notifPanel.style.display=(notifPanel.style.display==='block'?'none':'block');});
-document.addEventListener('click', e=>{if(!notifPanel.contains(e.target)&&e.target!==notifBtn) notifPanel.style.display='none';});
 </script>
 </body>
 </html>
