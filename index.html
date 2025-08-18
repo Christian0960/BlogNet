@@ -103,7 +103,6 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
       <button class="filter-btn" data-filter="public">Public Chat</button>
     </div>
 
-    <!-- Notifications + Profile + Friend actions -->
     <div style="display:flex; gap:10px; align-items:center;">
       <div id="notif-wrap">
         <button id="notif-btn" title="Notifications">🔔</button>
@@ -132,6 +131,11 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
+// ----------------------
+// Secret key for Firestore posts
+// ----------------------
+const SECRET_KEY = "MY_SECRET_KEY"; // must match Firestore rules
+
 // ----------------------
 // Stable unique userId
 // ----------------------
@@ -172,18 +176,11 @@ const removeFriendBtn = document.getElementById('remove-friend-btn');
 let currentFilter = 'friends';
 let friendIds = new Set();
 
-// Load username from localStorage
 if(localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
 
-// ----------------------
-// Bad words filter
-// ----------------------
 const badWords=['nigger','retard','shit','nigga','fuck','bitch','bastard','crap','douche','dick','cunt','cock','pussy','tits','dickhead','slut','whore','motherfucker'];
 function sanitizeText(text){let s=text;badWords.forEach(w=>{s=s.replace(new RegExp(`\\b${w}\\b`,'gi'),'****')});return s;}
 
-// ----------------------
-// Time helper
-// ----------------------
 function formatTimestamp(date){
   const now=new Date();
   const diffMs=now-date;
@@ -199,9 +196,6 @@ function formatTimestamp(date){
   return `${diffDays} days ago`;
 }
 
-// ----------------------
-// Filters
-// ----------------------
 buttons.forEach(btn => {
   btn.addEventListener('click', ()=>{
     buttons.forEach(b=>b.classList.remove('active'));
@@ -211,9 +205,6 @@ buttons.forEach(btn => {
   });
 });
 
-// ----------------------
-// FRIENDS subscription
-// ----------------------
 function subscribeFriends() {
   db.collection('users').doc(currentUserID).collection('friends')
     .where('status','==','accepted')
@@ -226,9 +217,6 @@ function subscribeFriends() {
 }
 subscribeFriends();
 
-// ----------------------
-// Posts
-// ----------------------
 let cachedPosts = [];
 const userCache = {};
 
@@ -275,21 +263,13 @@ function applyCurrentFilter() {
     const type = el.dataset.type || 'public';
     const author = el.dataset.author || '';
     let show=true;
-
-    if(currentFilter==='public') {
-      show = true; // show all posts as public chat
-    } else if(currentFilter==='friends') {
-      show = friendIds.has(author);
-    } else if(currentFilter==='unseen') {
-      show = (type==='public' && author!==currentUserID);
-    }
+    if(currentFilter==='public') show = true;
+    else if(currentFilter==='friends') show = friendIds.has(author);
+    else if(currentFilter==='unseen') show = (type==='public' && author!==currentUserID);
     el.style.display = show?'flex':'none';
   });
 }
 
-// ----------------------
-// Real-time posts
-// ----------------------
 db.collection('posts').orderBy('timestamp','desc').onSnapshot(async snapshot=>{
   cachedPosts = snapshot.docs.map(d=>({id:d.id,data:d.data()}));
   const authors=[...new Set(cachedPosts.map(p=>p.data.authorId).filter(Boolean))];
@@ -297,9 +277,6 @@ db.collection('posts').orderBy('timestamp','desc').onSnapshot(async snapshot=>{
   renderFeed();
 });
 
-// ----------------------
-// Notifications
-// ----------------------
 let notifUnreads=0;
 function subscribeNotifications() {
   db.collection('users').doc(currentUserID).collection('notifications')
@@ -352,7 +329,7 @@ document.addEventListener('click',e=>{
 });
 
 // ----------------------
-// Posting
+// Posting (with SECRET_KEY)
 // ----------------------
 form.addEventListener('submit',async e=>{
   e.preventDefault();
@@ -367,19 +344,18 @@ form.addEventListener('submit',async e=>{
     const usernameCheck = await db.collection('users').where('username','==',newUsername).get();
     if(!userDoc.exists && !usernameCheck.empty) return alert('Username taken');
     await userRef.set({username:newUsername,avatarURL:existing.avatarURL||'https://via.placeholder.com/40'},{merge:true});
+    
     await db.collection('posts').add({
       authorId:currentUserID,
       content:sanitizeText(content),
       timestamp:firebase.firestore.FieldValue.serverTimestamp(),
-      type:currentFilter
+      type:currentFilter,
+      key: SECRET_KEY
     });
     textarea.value='';
   } catch(err){ alert('Error posting: '+err.message); }
 });
 
-// ----------------------
-// Friend management
-// ----------------------
 addFriendBtn.addEventListener('click',async ()=>{
   const uname = prompt('Enter username to add as friend:');
   if(!uname) return;
