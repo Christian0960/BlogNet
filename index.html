@@ -90,6 +90,13 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
+// Stable unique userId
+let currentUserID = localStorage.getItem('userId');
+if (!currentUserID) {
+  currentUserID = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  localStorage.setItem('userId', currentUserID);
+}
+
 const firebaseConfig = {
   apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
   authDomain:"the-blog-network.firebaseapp.com",
@@ -195,19 +202,35 @@ db.collection('posts').orderBy('timestamp','desc').onSnapshot(renderPosts);
 form.addEventListener('submit', async e=>{
   e.preventDefault();
   const content = textarea.value.trim();
-  const username = usernameInput.value.trim() || 'friend_alpha';
   if(!content) return alert('Please write something before posting!');
 
-  localStorage.setItem('username', username);
-  const avatarURL = localStorage.getItem('avatarURL') || 'https://via.placeholder.com/40';
+  const newUsername = usernameInput.value.trim() || 'friend_alpha';
+  
+  // Save locally
+  localStorage.setItem('username', newUsername);
 
   try {
-    // Ensure user exists
-    await db.collection('users').doc(username).set({ username, avatarURL }, { merge: true });
+    // Load user document
+    const userDoc = await db.collection('users').doc(currentUserID).get();
+    const existingData = userDoc.exists ? userDoc.data() : {};
+    
+    // Check if username is taken by another user
+    const usernameCheck = await db.collection('users')
+      .where('username', '==', newUsername)
+      .get();
+    if(!userDoc.exists && !usernameCheck.empty){
+      return alert('Username already taken! Choose another.');
+    }
+
+    // Save/update user with stable ID
+    await db.collection('users').doc(currentUserID).set({
+      username: newUsername,
+      avatarURL: existingData.avatarURL || 'https://via.placeholder.com/40'
+    }, { merge: true });
 
     // Add post
     await db.collection('posts').add({
-      authorId: username,
+      authorId: currentUserID,
       content: sanitizeText(content),
       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       type: currentFilter,
