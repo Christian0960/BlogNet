@@ -109,17 +109,13 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
         <span id="notif-count">0</span>
         <div id="notif-panel"></div>
       </div>
-      <a href="profile.html"><button id="profile-btn" title="Your Profile">👤</button></a>
-      <button id="add-friend-btn" title="Add Friend">➕ Friend</button>
-      <button id="remove-friend-btn" title="Remove Friend">➖ Friend</button>
-    </div>
   </nav>
 </header>
 
 <form id="post-form">
-  <input type="text" id="username" placeholder="Your username" />
-  <textarea id="post-content" placeholder="Write your post here..."></textarea>
-  <button type="submit" id="submit-post">Post</button>
+  <input type="text" id="username" placeholder="What's your name?" />
+  <textarea id="post-content" placeholder=" Have something to say?"></textarea>
+  <button type="submit" id="send it!">Post</button>
 </form>
 
 <main id="feed"></main>
@@ -380,3 +376,4 @@ removeFriendBtn.addEventListener('click',async ()=>{
 </script>
 </body>
 </html>
+
