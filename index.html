@@ -130,7 +130,7 @@ profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?use
 // ----------------------
 function subscribeFriends(){
   db.collection('users').doc(currentUserID).collection('friends').where('status','==','accepted')
-    .onSnapshot(snap=>{friendIds=new Set(); snap.forEach(doc=>friendIds.add(doc.id)); friendIds.add(currentUserID); applyCurrentFilter(); });
+    .onSnapshot(snap=>{friendIds=new Set(); snap.forEach(doc=>friendIds.add(doc.id)); friendIds.add(currentUserID); fetchPosts(); });
 }
 subscribeFriends();
 
@@ -151,19 +151,20 @@ async function fetchMissingUsers(authorIds){
 }
 
 async function fetchPosts(){
-  const profileSnap = await db.collection('users').doc(currentUserID).collection('profilePosts').orderBy('timestamp','desc').get();
+  if(friendIds.size===0) return; // wait until friends load
+  // Fetch own + friends profilePosts
+  const postsPromises = [...friendIds].map(uid=>db.collection('users').doc(uid).collection('profilePosts').orderBy('timestamp','desc').get());
+  const profileSnaps = await Promise.all(postsPromises);
+  const profilePosts = profileSnaps.flatMap(snap => snap.docs.map(d=>({id:d.id,data:d.data(), type:'profile'})));
+  // Fetch public posts
   const publicSnap = await db.collection('publicPosts').orderBy('timestamp','desc').get();
-
-  cachedPosts = [
-    ...profileSnap.docs.map(d=>({id:d.id,data:d.data(), type:'profile'})),
-    ...publicSnap.docs.map(d=>({id:d.id,data:d.data(), type:'public'}))
-  ];
-
+  const publicPosts = publicSnap.docs.map(d=>({id:d.id,data:d.data(), type:'public'}));
+  
+  cachedPosts = [...profilePosts, ...publicPosts];
   const authors=[...new Set(cachedPosts.map(p=>p.data.authorId).filter(Boolean))];
   await fetchMissingUsers(authors);
   renderFeed();
 }
-fetchPosts();
 
 // ----------------------
 // Render & filter
@@ -236,8 +237,26 @@ form.addEventListener('submit', async e=>{
 });
 
 // ----------------------
-// Notifications toggle
+// Notifications
 // ----------------------
+async function fetchNotifications(){
+  const snap=await db.collection('users').doc(currentUserID).collection('notifications').orderBy('timestamp','desc').get();
+  notifPanel.innerHTML='';
+  if(snap.empty){notifPanel.innerHTML='<div class="notif-empty">No notifications</div>'; notifCount.style.display='none'; return;}
+  let unreadCount=0;
+  snap.forEach(doc=>{
+    const n=doc.data();
+    const div=document.createElement('div');
+    div.className='notif-item'+(n.read?'':' unread');
+    div.textContent=n.text;
+    notifPanel.appendChild(div);
+    if(!n.read) unreadCount++;
+  });
+  notifCount.textContent=unreadCount;
+  notifCount.style.display=unreadCount>0?'inline-block':'none';
+}
+fetchNotifications();
+
 notifBtn.addEventListener('click',()=>{notifPanel.style.display=(notifPanel.style.display==='block'?'none':'block');});
 document.addEventListener('click', e=>{if(!notifPanel.contains(e.target)&&e.target!==notifBtn) notifPanel.style.display='none';});
 
