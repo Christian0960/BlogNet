@@ -224,6 +224,7 @@ submitPostBtn.addEventListener('click', async () => {
       authorId: currentUserID,
       content,
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      key: "MY_SECRET_KEY"
     });
     newPostInput.value = '';
     loadBlogPosts();
@@ -240,3 +241,4 @@ loadProfile();
 </script>
 </body>
 </html>
+
