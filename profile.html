@@ -77,6 +77,7 @@
 
   <h2>Friends</h2>
   <div id="friends-container"></div>
+  <div id="friend-actions"></div>
 
   <!-- New Blog Post Form -->
   <div id="new-post-container">
@@ -130,6 +131,8 @@ const main = document.getElementById('profile-main');
 const blogPostsContainer = document.getElementById('blog-posts-container');
 const newPostInput = document.getElementById('new-post-input');
 const submitPostBtn = document.getElementById('submit-post-btn');
+const friendsContainer = document.getElementById('friends-container');
+const friendActions = document.getElementById('friend-actions');
 
 // Load profile
 async function loadProfile() {
@@ -153,6 +156,8 @@ async function loadProfile() {
       submitPostBtn.style.display = 'none';
     }
 
+    loadFriends();
+    setupFriendActions();
     loadBlogPosts();
   } catch(err){
     console.error('Error loading profile:', err);
@@ -196,12 +201,85 @@ saveBtn.addEventListener('click', async () => {
 avatarInput.addEventListener('input', () => avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150');
 wallpaperSelect.addEventListener('change', () => main.style.background = wallpaperSelect.value);
 
+// Load friends
+async function loadFriends() {
+  friendsContainer.innerHTML = '';
+  const snapshot = await db.collection('users')
+    .doc(profileUserID)
+    .collection('friends')
+    .get();
+
+  if (snapshot.empty) {
+    friendsContainer.innerHTML = '<p>No friends yet.</p>';
+    return;
+  }
+
+  snapshot.forEach(doc => {
+    const friend = doc.data();
+    const div = document.createElement('p');
+    div.textContent = friend.username || 'Unknown';
+    friendsContainer.appendChild(div);
+  });
+}
+
+// Setup friend actions
+async function setupFriendActions() {
+  friendActions.innerHTML = '';
+  if (isOwnProfile) return;
+
+  // Already friends?
+  const friendDoc = await db.collection('users')
+    .doc(currentUserID)
+    .collection('friends')
+    .doc(profileUserID)
+    .get();
+
+  if (friendDoc.exists) {
+    friendActions.innerHTML = '<p>✅ You are friends</p>';
+    return;
+  }
+
+  // Pending request?
+  const pending = await db.collection('users')
+    .doc(profileUserID)
+    .collection('notifications')
+    .where('from', '==', currentUserID)
+    .where('type', '==', 'friend_request')
+    .get();
+
+  if (!pending.empty) {
+    friendActions.innerHTML = '<p>📩 Friend request sent</p>';
+    return;
+  }
+
+  // Show button
+  const btn = document.createElement('button');
+  btn.textContent = '➕ Add Friend';
+  btn.addEventListener('click', async () => {
+    try {
+      await db.collection('users')
+        .doc(profileUserID)
+        .collection('notifications')
+        .add({
+          type: 'friend_request',
+          from: currentUserID,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      alert('Friend request sent!');
+      setupFriendActions();
+    } catch(err) {
+      alert('Error: ' + err.message);
+    }
+  });
+  friendActions.appendChild(btn);
+}
+
 // Load profile blog posts only (nested collection)
 async function loadBlogPosts() {
   blogPostsContainer.innerHTML = '';
   const snapshot = await db.collection('users')
     .doc(profileUserID)
-    .collection('profilePosts')  // <-- nested collection
+    .collection('profilePosts')
     .orderBy('timestamp', 'desc')
     .get();
 
@@ -232,7 +310,7 @@ submitPostBtn.addEventListener('click', async () => {
       .add(postData);
 
     newPostInput.value = '';
-    loadBlogPosts(); // Reload so the post shows with proper timestamp
+    loadBlogPosts();
   } catch(err) {
     alert('Error posting blog: ' + err.message);
   }
