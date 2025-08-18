@@ -196,13 +196,15 @@ saveBtn.addEventListener('click', async () => {
 avatarInput.addEventListener('input', () => avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150');
 wallpaperSelect.addEventListener('change', () => main.style.background = wallpaperSelect.value);
 
-// Load profile blog posts only
+// Load profile blog posts only (nested collection)
 async function loadBlogPosts() {
   blogPostsContainer.innerHTML = '';
-  const snapshot = await db.collection('posts')
-    .where('authorId', '==', profileUserID)
+  const snapshot = await db.collection('users')
+    .doc(profileUserID)
+    .collection('profilePosts')  // <-- nested collection
     .orderBy('timestamp', 'desc')
     .get();
+
   snapshot.forEach(doc => {
     const post = doc.data();
     const postDiv = document.createElement('div');
@@ -213,20 +215,22 @@ async function loadBlogPosts() {
   });
 }
 
-// Submit new blog post
+// Submit new blog post (nested collection)
 submitPostBtn.addEventListener('click', async () => {
   const content = newPostInput.value.trim();
   if (!content) return alert('Post cannot be empty.');
 
   const postData = {
-    authorId: currentUserID,
     content,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    key: "MY_SECRET_KEY"
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
   };
 
   try {
-    await db.collection('posts').add(postData);
+    await db.collection('users')
+      .doc(currentUserID)
+      .collection('profilePosts')
+      .add(postData);
+
     newPostInput.value = '';
     loadBlogPosts(); // Reload so the post shows with proper timestamp
   } catch(err) {
