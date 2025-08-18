@@ -96,18 +96,16 @@ const form=document.getElementById('post-form');
 const textarea=document.getElementById('post-content');
 const usernameInput=document.getElementById('username');
 const postTypeSelect=document.getElementById('post-type');
-const notifBtn=document.getElementById('notif-btn');
-const notifCount=document.getElementById('notif-count');
-const notifPanel=document.getElementById('notif-panel');
 const profileBtn=document.getElementById('profile-btn');
 
 let currentFilter='friends';
 let friendIds=new Set();
 if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
-function sanitizeText(text){return text;} // simplified for demo
+function sanitizeText(text){return text;}
 function formatTimestamp(date){const now=new Date();const diffMs=now-date;const diffMins=Math.floor(diffMs/60000);if(diffMins<1)return'just now';if(diffMins===1)return'1 minute ago';if(diffMins<60)return`${diffMins} minutes ago`;const diffHrs=Math.floor(diffMins/60);if(diffHrs===1)return'1 hour ago';if(diffHrs<24)return`${diffHrs} hours ago`;const diffDays=Math.floor(diffHrs/24);if(diffDays===1)return'1 day ago';return`${diffDays} days ago`;}
 
+// Filter buttons
 buttons.forEach(btn=>{btn.addEventListener('click',()=>{buttons.forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentFilter=btn.getAttribute('data-filter'); applyCurrentFilter(); });});
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
 
@@ -130,12 +128,10 @@ async function fetchMissingUsers(authorIds){
 }
 
 async function fetchPosts(){
-  // profile posts
   const postsPromises = [...friendIds].map(uid=>db.collection('users').doc(uid).collection('profilePosts').orderBy('timestamp','desc').get());
   const profileSnaps = await Promise.all(postsPromises);
   const profilePosts = profileSnaps.flatMap(snap => snap.docs.map(d=>({id:d.id,data:d.data(), type:'profile'})));
 
-  // public posts
   const publicSnap = await db.collection('publicPosts').orderBy('timestamp','desc').get();
   const publicPosts = publicSnap.docs.map(d=>({id:d.id,data:d.data(), type:'public'}));
 
@@ -145,7 +141,6 @@ async function fetchPosts(){
   renderFeed();
 }
 
-// Render feed
 function renderFeed(){
   feed.innerHTML='';
   cachedPosts.forEach(p=>{
@@ -183,12 +178,12 @@ function applyCurrentFilter(){
   });
 }
 
-// Posting
+// Posting with username uniqueness and old username cleanup
 form.addEventListener('submit', async e => {
   e.preventDefault();
   const content = textarea.value.trim();
   if (!content) return alert('Please write something before posting!');
-  
+
   const newUsername = (usernameInput.value.trim() || 'friend_alpha');
   localStorage.setItem('username', newUsername);
 
@@ -197,19 +192,18 @@ form.addEventListener('submit', async e => {
     const userDoc = await userRef.get();
     const existing = userDoc.exists ? userDoc.data() : {};
 
-    // Check if someone else already has the username
-    const usernameCheck = await db.collection('users').where('username', '==', newUsername).get();
+    const usernameCheck = await db.collection('users').where('username','==',newUsername).get();
     const takenByOthers = usernameCheck.docs.some(doc => doc.id !== currentUserID);
-    if (takenByOthers) return alert('Username taken');
+    if(takenByOthers) return alert('Username already taken!');
 
-    // Update user document with the new username (overwriting old username)
-    await userRef.set({
-      username: newUsername,
-      avatarURL: existing.avatarURL || 'https://via.placeholder.com/40'
-    }, { merge: true });
+    const oldUsername = existing.username;
+    if(oldUsername && oldUsername !== newUsername){
+      await db.collection('usernames').doc(oldUsername).delete().catch(()=>{});
+    }
+    await db.collection('usernames').doc(newUsername).set({userId: currentUserID});
 
-    // Add the post
-    await db.collection('users').doc(currentUserID).collection('profilePosts').add({
+    await userRef.set({ username:newUsername, avatarURL:existing.avatarURL||'https://via.placeholder.com/40' }, { merge:true });
+    await userRef.collection('profilePosts').add({
       authorId: currentUserID,
       content: sanitizeText(content),
       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -217,14 +211,13 @@ form.addEventListener('submit', async e => {
       key: SECRET_KEY
     });
 
-    textarea.value = '';
+    textarea.value='';
     fetchPosts();
 
-  } catch (err) {
-    alert('Error posting: ' + err.message);
+  } catch(err){
+    alert('Error posting: '+err.message);
   }
 });
 </script>
 </body>
 </html>
-
