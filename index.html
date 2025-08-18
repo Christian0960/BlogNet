@@ -5,88 +5,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>The Blog Network</title>
 <style>
-body {
-  margin:0; font-family:Arial,sans-serif;
-  background:#f0f4ff url('https://www.transparenttextures.com/patterns/tileable-wood-print.png') repeat;
-  color:#000080; user-select:none;
-}
-header {
-  background:linear-gradient(90deg,#3399ff,#9966ff);
-  padding:20px 30px; box-shadow:0 3px 6px rgba(0,0,0,0.3);
-  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;
-}
+body { margin:0; font-family:Arial,sans-serif; background:#f0f4ff url('https://www.transparenttextures.com/patterns/tileable-wood-print.png') repeat; color:#000080; user-select:none; }
+header { background:linear-gradient(90deg,#3399ff,#9966ff); padding:20px 30px; box-shadow:0 3px 6px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
 .logo-container { display:flex; align-items:center; gap:15px; }
 .logo { font-size:36px; color:#fff; font-weight:bold; }
 .tagline { font-size:18px; color:#ffe066; font-style:italic; font-weight:bold; text-shadow:1px 1px 0 #000033; }
 nav { display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wrap; }
-
-button.filter-btn {
-  background:#ffcc00; border:2px solid #000080; border-radius:3px;
-  padding:8px 14px; font-weight:bold; font-size:12px; cursor:pointer;
-  color:#000080; box-shadow:1px 1px 0 #333; transition:background 0.2s; user-select:none;
-}
-button.filter-btn:hover { background:#ffff66; }
-button.filter-btn.active { background:#ffff99; border-color:#330066; box-shadow:2px 2px 4px #660099; }
-
-#profile-btn, #notif-btn, #add-friend-btn, #remove-friend-btn {
+button.filter-btn, #profile-btn, #notif-btn, #add-friend-btn, #remove-friend-btn {
   background:#ffcc00; border:2px solid #000080; border-radius:3px;
   padding:8px 10px; font-weight:bold; font-size:14px; cursor:pointer;
   color:#000080; box-shadow:1px 1px 0 #333; transition:background 0.2s;
 }
-#profile-btn:hover, #notif-btn:hover, #add-friend-btn:hover, #remove-friend-btn:hover { background:#ffff66; }
-
+button.filter-btn:hover, #profile-btn:hover, #notif-btn:hover, #add-friend-btn:hover, #remove-friend-btn:hover { background:#ffff66; }
+button.filter-btn.active { background:#ffff99; border-color:#330066; box-shadow:2px 2px 4px #660099; }
 #notif-wrap { position:relative; }
-#notif-count {
-  position:absolute; top:-6px; right:-6px; background:#e02424; color:#fff;
-  border-radius:10px; padding:2px 6px; font-size:11px; display:none;
-}
-#notif-panel {
-  position:absolute; right:0; top:42px; width:280px; max-height:320px; overflow:auto;
-  background:#ffffff; border:2px solid #9966ff; box-shadow:0 6px 14px rgba(0,0,0,0.25);
-  border-radius:6px; display:none; z-index:10;
-}
-.notif-item {
-  padding:10px; border-bottom:1px solid #eee; font-size:13px;
-}
+#notif-count { position:absolute; top:-6px; right:-6px; background:#e02424; color:#fff; border-radius:10px; padding:2px 6px; font-size:11px; display:none; }
+#notif-panel { position:absolute; right:0; top:42px; width:280px; max-height:320px; overflow:auto; background:#ffffff; border:2px solid #9966ff; box-shadow:0 6px 14px rgba(0,0,0,0.25); border-radius:6px; display:none; z-index:10; }
+.notif-item { padding:10px; border-bottom:1px solid #eee; font-size:13px; }
 .notif-item.unread { background:#f5f0ff; font-weight:bold; }
 .notif-empty { padding:14px; text-align:center; color:#555; font-size:13px; }
-
-main {
-  max-width:700px; margin:25px auto; padding:10px 20px;
-  background:#ffffffcc; border:3px solid #3399ff;
-  box-shadow:0 4px 10px rgba(0,0,0,0.2); border-radius:6px; min-height:300px;
-}
-form#post-form {
-  max-width:700px; margin:0 auto 25px auto; background:#ffffffcc;
-  padding:15px 20px; border:3px solid #9966ff; border-radius:6px;
-  box-shadow:0 4px 8px rgba(153,102,255,0.5); display:flex; flex-direction:column;
-}
-input#username, textarea#post-content {
-  width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px;
-}
+main { max-width:700px; margin:25px auto; padding:10px 20px; background:#ffffffcc; border:3px solid #3399ff; box-shadow:0 4px 10px rgba(0,0,0,0.2); border-radius:6px; min-height:300px; }
+form#post-form { max-width:700px; margin:0 auto 25px auto; background:#ffffffcc; padding:15px 20px; border:3px solid #9966ff; border-radius:6px; box-shadow:0 4px 8px rgba(153,102,255,0.5); display:flex; flex-direction:column; }
+input#username, textarea#post-content { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; }
 textarea#post-content { min-height:60px; resize:vertical; }
-button#submit-post {
-  margin-top:8px; background:#9966ff; border:none;
-  padding:8px 16px; color:white; font-weight:bold;
-  border-radius:4px; cursor:pointer; align-self:flex-end; transition:background 0.3s;
-}
+button#submit-post { margin-top:8px; background:#9966ff; border:none; padding:8px 16px; color:white; font-weight:bold; border-radius:4px; cursor:pointer; align-self:flex-end; transition:background 0.3s; }
 button#submit-post:hover { background:#7a3fcc; }
-
-.post {
-  border:2px inset #99ccff; background:#e6f0ff; padding:15px; margin-bottom:20px;
-  font-size:13px; font-family:'Courier New', monospace;
-  box-shadow:1px 1px 0 #99ccff; display:flex; align-items:center; gap:10px;
-}
+.post { border:2px inset #99ccff; background:#e6f0ff; padding:15px; margin-bottom:20px; font-size:13px; font-family:'Courier New', monospace; box-shadow:1px 1px 0 #99ccff; display:flex; align-items:center; gap:10px; }
 .post img { width:40px; height:40px; border-radius:50%; object-fit:cover; cursor:pointer; }
 .post-content { display:flex; flex-direction:column; }
 .post-content .author a { text-decoration:none; color:#000080; font-weight:bold; cursor:pointer; }
 .post-content .author a:hover { text-decoration:underline; }
-
 footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Courier New', monospace; color:#333; }
-
-.friend-controls {
-  display:flex; gap:10px; margin-bottom:10px;
-}
+.friend-controls { display:flex; gap:10px; margin-bottom:10px; }
 </style>
 </head>
 <body>
@@ -102,8 +52,8 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
       <button class="filter-btn" data-filter="unseen">Unseen</button>
       <button class="filter-btn" data-filter="public">Public Chat</button>
     </div>
-
     <div style="display:flex; gap:10px; align-items:center;">
+      <button id="profile-btn" title="Profile">👤</button>
       <div id="notif-wrap">
         <button id="notif-btn" title="Notifications">🔔</button>
         <span id="notif-count">0</span>
@@ -121,30 +71,18 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 
 <main id="feed"></main>
 
-<footer>
-  <em>EST. 2025 CREATED BY friend_alpha</em>
-</footer>
+<footer><em>EST. 2025 CREATED BY friend_alpha</em></footer>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 // ----------------------
-// Secret key for Firestore posts
+// Config & IDs
 // ----------------------
-const SECRET_KEY = "MY_SECRET_KEY";
-
-// ----------------------
-// Stable unique userId
-// ----------------------
+const SECRET_KEY="MY_SECRET_KEY";
 let currentUserID = localStorage.getItem('userId');
-if (!currentUserID) {
-  currentUserID = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  localStorage.setItem('userId', currentUserID);
-}
+if(!currentUserID){ currentUserID='user_'+Date.now()+'_'+Math.floor(Math.random()*1000); localStorage.setItem('userId',currentUserID); }
 
-// ----------------------
-// Firebase init
-// ----------------------
 const firebaseConfig = {
   apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
   authDomain:"the-blog-network.firebaseapp.com",
@@ -159,99 +97,87 @@ const db = firebase.firestore();
 // ----------------------
 // UI refs
 // ----------------------
-const buttons = document.querySelectorAll('.filter-btn');
-const feed = document.getElementById('feed');
-const form = document.getElementById('post-form');
-const textarea = document.getElementById('post-content');
-const usernameInput = document.getElementById('username');
-const notifBtn = document.getElementById('notif-btn');
-const notifCount = document.getElementById('notif-count');
-const notifPanel = document.getElementById('notif-panel');
+const buttons=document.querySelectorAll('.filter-btn');
+const feed=document.getElementById('feed');
+const form=document.getElementById('post-form');
+const textarea=document.getElementById('post-content');
+const usernameInput=document.getElementById('username');
+const notifBtn=document.getElementById('notif-btn');
+const notifCount=document.getElementById('notif-count');
+const notifPanel=document.getElementById('notif-panel');
+const profileBtn=document.getElementById('profile-btn');
 
-let currentFilter = 'friends';
-let friendIds = new Set();
-
-if(localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
+let currentFilter='friends';
+let friendIds=new Set();
+if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
 const badWords=['nigger','retard','shit','nigga','fuck','bitch','bastard','crap','douche','dick','cunt','cock','pussy','tits','dickhead','slut','whore','motherfucker'];
 function sanitizeText(text){let s=text;badWords.forEach(w=>{s=s.replace(new RegExp(`\\b${w}\\b`,'gi'),'****')});return s;}
+function formatTimestamp(date){const now=new Date();const diffMs=now-date;const diffMins=Math.floor(diffMs/60000);if(diffMins<1)return'just now';if(diffMins===1)return'1 minute ago';if(diffMins<60)return`${diffMins} minutes ago`;const diffHrs=Math.floor(diffMins/60);if(diffHrs===1)return'1 hour ago';if(diffHrs<24)return`${diffHrs} hours ago`;const diffDays=Math.floor(diffHrs/24);if(diffDays===1)return'1 day ago';return`${diffDays} days ago`;}
 
-function formatTimestamp(date){
-  const now=new Date();
-  const diffMs=now-date;
-  const diffMins=Math.floor(diffMs/60000);
-  if(diffMins<1) return 'just now';
-  if(diffMins===1) return '1 minute ago';
-  if(diffMins<60) return `${diffMins} minutes ago`;
-  const diffHrs=Math.floor(diffMins/60);
-  if(diffHrs===1) return '1 hour ago';
-  if(diffHrs<24) return `${diffHrs} hours ago`;
-  const diffDays=Math.floor(diffHrs/24);
-  if(diffDays===1) return '1 day ago';
-  return `${diffDays} days ago`;
-}
+// ----------------------
+// Filters
+// ----------------------
+buttons.forEach(btn=>{btn.addEventListener('click',()=>{buttons.forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentFilter=btn.getAttribute('data-filter'); applyCurrentFilter(); });});
 
-buttons.forEach(btn => {
-  btn.addEventListener('click', ()=> {
-    buttons.forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    currentFilter = btn.getAttribute('data-filter');
-    fetchProfilePosts();
-  });
-});
+// ----------------------
+// Profile button
+// ----------------------
+profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
 
 // ----------------------
 // Friends subscription
 // ----------------------
-function subscribeFriends() {
-  db.collection('users').doc(currentUserID).collection('friends')
-    .where('status','==','accepted')
-    .onSnapshot(snap=>{
-      friendIds = new Set();
-      snap.forEach(doc=>friendIds.add(doc.id));
-      friendIds.add(currentUserID);
-      fetchProfilePosts();
-    });
+function subscribeFriends(){
+  db.collection('users').doc(currentUserID).collection('friends').where('status','==','accepted')
+    .onSnapshot(snap=>{friendIds=new Set(); snap.forEach(doc=>friendIds.add(doc.id)); friendIds.add(currentUserID); applyCurrentFilter(); });
 }
 subscribeFriends();
 
 // ----------------------
-// Fetch posts depending on filter
+// Posts fetching & cache
 // ----------------------
-let cachedPosts = [];
-const userCache = {};
+let cachedPosts=[];
+const userCache={};
 
-async function fetchMissingUsers(authorIds) {
-  const missing = authorIds.filter(id => !userCache[id]);
-  if (!missing.length) return Promise.resolve();
-  const chunks = [];
-  while (missing.length) chunks.push(missing.splice(0,10));
-  return Promise.all(chunks.map(list =>
-    db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',list).get()
-      .then(s=>s.forEach(u=>userCache[u.id]=u.data() || {}))
+async function fetchMissingUsers(authorIds){
+  const missing=authorIds.filter(id=>!userCache[id]);
+  if(!missing.length)return;
+  const chunks=[];
+  while(missing.length) chunks.push(missing.splice(0,10));
+  await Promise.all(chunks.map(list=>db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',list).get()
+    .then(s=>s.forEach(u=>userCache[u.id]=u.data()||{}))
   ));
 }
 
-async function fetchProfilePosts() {
-  const postsRef = db.collection('users').doc(currentUserID).collection('profilePosts').orderBy('timestamp','desc');
-  const snapshot = await postsRef.get();
-  cachedPosts = snapshot.docs.map(d=>({id:d.id,data:d.data()}));
+async function fetchPosts(){
+  const profileSnap = await db.collection('users').doc(currentUserID).collection('profilePosts').orderBy('timestamp','desc').get();
+  const publicSnap = await db.collection('publicPosts').orderBy('timestamp','desc').get();
+
+  cachedPosts = [
+    ...profileSnap.docs.map(d=>({id:d.id,data:d.data(), type:'profile'})),
+    ...publicSnap.docs.map(d=>({id:d.id,data:d.data(), type:'public'}))
+  ];
 
   const authors=[...new Set(cachedPosts.map(p=>p.data.authorId).filter(Boolean))];
   await fetchMissingUsers(authors);
   renderFeed();
 }
+fetchPosts();
 
-function renderFeed() {
+// ----------------------
+// Render & filter
+// ----------------------
+function renderFeed(){
   feed.innerHTML='';
   cachedPosts.forEach(p=>{
-    const post = p.data;
-    const authorId = post.authorId || 'friend_alpha';
-    const userData = userCache[authorId] || { username: authorId, avatarURL: 'https://via.placeholder.com/40' };
-    const article = document.createElement('article');
+    const post=p.data;
+    const authorId=post.authorId||'friend_alpha';
+    const userData=userCache[authorId]||{username:authorId, avatarURL:'https://via.placeholder.com/40'};
+    const article=document.createElement('article');
     article.className='post';
-    article.dataset.type = post.type || 'profile';
-    article.dataset.author = authorId;
+    article.dataset.type=p.type;
+    article.dataset.author=authorId;
     article.innerHTML=`
       <img src="${userData.avatarURL}" alt="avatar" class="profile-link" data-userid="${authorId}">
       <div class="post-content">
@@ -261,54 +187,60 @@ function renderFeed() {
       </div>
     `;
     feed.appendChild(article);
-    article.querySelectorAll('.profile-link').forEach(img=>{
-      img.addEventListener('click', ()=> window.location.href = `profile.html?user=${encodeURIComponent(authorId)}`);
-    });
+    article.querySelectorAll('.profile-link').forEach(img=>img.addEventListener('click',()=>window.location.href=`profile.html?user=${encodeURIComponent(authorId)}`));
   });
   applyCurrentFilter();
 }
 
-function applyCurrentFilter() {
-  const posts = feed.querySelectorAll('.post');
+function applyCurrentFilter(){
+  const posts=feed.querySelectorAll('.post');
   posts.forEach(el=>{
-    const type = el.dataset.type || 'profile';
-    const author = el.dataset.author || '';
+    const type=el.dataset.type;
+    const author=el.dataset.author;
     let show=true;
-    if(currentFilter==='public') show = (type==='public');
-    else if(currentFilter==='friends') show = friendIds.has(author);
-    else if(currentFilter==='unseen') show = (type==='profile' && !friendIds.has(author));
-    el.style.display = show?'flex':'none';
+    if(currentFilter==='public') show=(type==='public');
+    else if(currentFilter==='friends') show=friendIds.has(author);
+    else if(currentFilter==='unseen') show=(type==='profile' && !friendIds.has(author));
+    el.style.display=show?'flex':'none';
   });
 }
 
 // ----------------------
-// Posting (profilePosts collection)
+// Posting
 // ----------------------
-form.addEventListener('submit',async e=>{
+form.addEventListener('submit', async e=>{
   e.preventDefault();
-  const content = textarea.value.trim();
+  const content=textarea.value.trim();
   if(!content) return alert('Please write something before posting!');
-  const newUsername = (usernameInput.value.trim() || 'friend_alpha');
+  const newUsername=(usernameInput.value.trim()||'friend_alpha');
   localStorage.setItem('username',newUsername);
-  try {
-    const userRef = db.collection('users').doc(currentUserID);
-    const userDoc = await userRef.get();
-    const existing = userDoc.exists?userDoc.data():{};
-    const usernameCheck = await db.collection('users').where('username','==',newUsername).get();
+
+  try{
+    const userRef=db.collection('users').doc(currentUserID);
+    const userDoc=await userRef.get();
+    const existing=userDoc.exists?userDoc.data():{};
+    const usernameCheck=await db.collection('users').where('username','==',newUsername).get();
     if(!userDoc.exists && !usernameCheck.empty) return alert('Username taken');
-    await userRef.set({username:newUsername,avatarURL:existing.avatarURL||'https://via.placeholder.com/40'},{merge:true});
-    
+    await userRef.set({username:newUsername, avatarURL:existing.avatarURL||'https://via.placeholder.com/40'},{merge:true});
+
     await db.collection('users').doc(currentUserID).collection('profilePosts').add({
       authorId:currentUserID,
       content:sanitizeText(content),
       timestamp:firebase.firestore.FieldValue.serverTimestamp(),
       type:'profile',
-      key: SECRET_KEY
+      key:SECRET_KEY
     });
     textarea.value='';
-    fetchProfilePosts();
-  } catch(err){ alert('Error posting: '+err.message); }
+    fetchPosts();
+  }catch(err){alert('Error posting: '+err.message);}
 });
+
+// ----------------------
+// Notifications toggle
+// ----------------------
+notifBtn.addEventListener('click',()=>{notifPanel.style.display=(notifPanel.style.display==='block'?'none':'block');});
+document.addEventListener('click', e=>{if(!notifPanel.contains(e.target)&&e.target!==notifBtn) notifPanel.style.display='none';});
+
 </script>
 </body>
 </html>
