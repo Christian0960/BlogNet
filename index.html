@@ -184,41 +184,47 @@ function applyCurrentFilter(){
 }
 
 // Posting
-form.addEventListener('submit', async e=>{
+form.addEventListener('submit', async e => {
   e.preventDefault();
-  const content=textarea.value.trim();
-  if(!content) return alert('Write something!');
-  const newUsername=usernameInput.value.trim()||'friend_alpha';
-  localStorage.setItem('username',newUsername);
-  const type=postTypeSelect.value;
+  const content = textarea.value.trim();
+  if (!content) return alert('Please write something before posting!');
+  
+  const newUsername = (usernameInput.value.trim() || 'friend_alpha');
+  localStorage.setItem('username', newUsername);
 
-  try{
-    const userRef=db.collection('users').doc(currentUserID);
-    const userDoc=await userRef.get();
-    const existing=userDoc.exists?userDoc.data():{};
-    await userRef.set({username:newUsername, avatarURL:existing.avatarURL||'https://via.placeholder.com/40'},{merge:true});
+  try {
+    const userRef = db.collection('users').doc(currentUserID);
+    const userDoc = await userRef.get();
+    const existing = userDoc.exists ? userDoc.data() : {};
 
-    if(type==='profile'){
-      await db.collection('users').doc(currentUserID).collection('profilePosts').add({
-        authorId:currentUserID,
-        content:sanitizeText(content),
-        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
-        type:'profile',
-        key:SECRET_KEY
-      });
-    } else {
-      await db.collection('publicPosts').add({
-        authorId:currentUserID,
-        content:sanitizeText(content),
-        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
-        type:'public',
-        key:SECRET_KEY
-      });
-    }
-    textarea.value='';
+    // Check if someone else already has the username
+    const usernameCheck = await db.collection('users').where('username', '==', newUsername).get();
+    const takenByOthers = usernameCheck.docs.some(doc => doc.id !== currentUserID);
+    if (takenByOthers) return alert('Username taken');
+
+    // Update user document with the new username (overwriting old username)
+    await userRef.set({
+      username: newUsername,
+      avatarURL: existing.avatarURL || 'https://via.placeholder.com/40'
+    }, { merge: true });
+
+    // Add the post
+    await db.collection('users').doc(currentUserID).collection('profilePosts').add({
+      authorId: currentUserID,
+      content: sanitizeText(content),
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      type: 'profile',
+      key: SECRET_KEY
+    });
+
+    textarea.value = '';
     fetchPosts();
-  }catch(err){alert('Error posting: '+err.message);}
+
+  } catch (err) {
+    alert('Error posting: ' + err.message);
+  }
 });
 </script>
 </body>
 </html>
+
