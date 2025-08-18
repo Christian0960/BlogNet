@@ -51,7 +51,7 @@ button#submit-post:hover { background:#7a3fcc; }
   font-size:13px; font-family:'Courier New', monospace;
   box-shadow:1px 1px 0 #99ccff; display:flex; align-items:center; gap:10px;
 }
-.post img { width:40px; height:40px; border-radius:50%; object-fit:cover; }
+.post img { width:40px; height:40px; border-radius:50%; object-fit:cover; cursor:pointer; }
 .post-content { display:flex; flex-direction:column; }
 .post-content .author a { text-decoration:none; color:#000080; font-weight:bold; cursor:pointer; }
 .post-content .author a:hover { text-decoration:underline; }
@@ -180,16 +180,24 @@ async function renderPosts(snapshot){
     article.className='post';
     article.setAttribute('data-type', post.type || 'friends');
     article.innerHTML=`
-      <img src="${userData.avatarURL}" alt="avatar">
+      <img src="${userData.avatarURL}" alt="avatar" class="profile-link" data-userid="${authorId}">
       <div class="post-content">
         <div class="author">
-          <a href="profile.html?user=${encodeURIComponent(userData.username)}">${userData.username}</a>
+          <a href="profile.html?user=${encodeURIComponent(authorId)}">${userData.username}</a>
         </div>
         <div class="timestamp">${post.timestamp?formatTimestamp(post.timestamp.toDate()):''}</div>
         <div class="content">${post.content}</div>
       </div>
     `;
     feed.appendChild(article);
+
+    // Add click listener to avatar
+    article.querySelectorAll('.profile-link').forEach(img => {
+      img.addEventListener('click', () => {
+        const userId = img.dataset.userid;
+        window.location.href = `profile.html?user=${encodeURIComponent(userId)}`;
+      });
+    });
   });
 
   filterPosts(currentFilter);
