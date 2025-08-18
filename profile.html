@@ -218,14 +218,26 @@ submitPostBtn.addEventListener('click', async () => {
   const content = newPostInput.value.trim();
   if (!content) return alert('Post cannot be empty.');
 
+  const postData = {
+    authorId: currentUserID,
+    content,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    key: "MY_SECRET_KEY"
+  };
+
   try {
-    await db.collection('posts').add({
-      authorId: currentUserID,
-      content,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      key: "MY_SECRET_KEY"  // <-- added comma and key
-    });
+    // Optimistically show post immediately
+    const tempPostDiv = document.createElement('div');
+    tempPostDiv.className = 'blog-post';
+    tempPostDiv.innerHTML = `<div class="timestamp">Just now</div>
+                             <div class="content">${content}</div>`;
+    blogPostsContainer.prepend(tempPostDiv);
+
+    await db.collection('posts').add(postData);
+
     newPostInput.value = '';
+
+    // Refresh posts for accurate timestamp
     loadBlogPosts();
   } catch(err) {
     alert('Error posting blog: ' + err.message);
