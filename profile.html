@@ -196,7 +196,7 @@ saveBtn.addEventListener('click', async () => {
 avatarInput.addEventListener('input', () => avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150');
 wallpaperSelect.addEventListener('change', () => main.style.background = wallpaperSelect.value);
 
-// Load personal blog posts
+// Load profile blog posts only
 async function loadBlogPosts() {
   blogPostsContainer.innerHTML = '';
   const snapshot = await db.collection('posts')
@@ -226,19 +226,9 @@ submitPostBtn.addEventListener('click', async () => {
   };
 
   try {
-    // Optimistically show post immediately
-    const tempPostDiv = document.createElement('div');
-    tempPostDiv.className = 'blog-post';
-    tempPostDiv.innerHTML = `<div class="timestamp">Just now</div>
-                             <div class="content">${content}</div>`;
-    blogPostsContainer.prepend(tempPostDiv);
-
     await db.collection('posts').add(postData);
-
     newPostInput.value = '';
-
-    // Refresh posts for accurate timestamp
-    loadBlogPosts();
+    loadBlogPosts(); // Reload so the post shows with proper timestamp
   } catch(err) {
     alert('Error posting blog: ' + err.message);
   }
