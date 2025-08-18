@@ -24,6 +24,8 @@
   #username-input { flex:1; font-size:20px; }
   .blog-post { border:2px inset #99ccff; background:#e6f0ff; padding:10px; margin-bottom:10px; border-radius:4px; font-size:13px; font-family:'Courier New', monospace; }
   .blog-post .timestamp { font-size:11px; color:#333; margin-bottom:5px; }
+  #new-post-container { margin-bottom:20px; }
+  #new-post-input { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; resize:vertical; min-height:60px; margin-bottom:8px; }
 </style>
 </head>
 <body>
@@ -39,7 +41,7 @@
 </header>
 
 <main id="profile-main">
-  <h1>Edit Your Profile</h1>
+  <h1>The Profile Place</h1>
 
   <div id="avatar-username-container">
     <div id="profile-avatar">
@@ -76,7 +78,14 @@
   <h2>Friends</h2>
   <div id="friends-container"></div>
 
-  <h2>My Blog Posts</h2>
+  <!-- New Blog Post Form -->
+  <div id="new-post-container">
+    <h2>New Blog Post</h2>
+    <textarea id="new-post-input" placeholder="Write your post here..."></textarea>
+    <button id="submit-post-btn">Post</button>
+  </div>
+
+  <h2>Recent Blog Posts</h2>
   <div id="blog-posts-container"></div>
 </main>
 
@@ -119,6 +128,8 @@ const saveBtn = document.getElementById('save-btn');
 const avatarPreview = document.getElementById('avatar-preview');
 const main = document.getElementById('profile-main');
 const blogPostsContainer = document.getElementById('blog-posts-container');
+const newPostInput = document.getElementById('new-post-input');
+const submitPostBtn = document.getElementById('submit-post-btn');
 
 // Load profile
 async function loadProfile() {
@@ -137,9 +148,10 @@ async function loadProfile() {
 
     // Disable editing if viewing someone else's profile
     if (!isOwnProfile) {
-      [usernameInput, bioInput, movieInput, songInput, birthdayInput, avatarInput, wallpaperSelect, saveBtn]
+      [usernameInput, bioInput, movieInput, songInput, birthdayInput, avatarInput, wallpaperSelect, saveBtn, newPostInput, submitPostBtn]
         .forEach(el => el.disabled = true);
       saveBtn.style.display = 'none';
+      submitPostBtn.style.display = 'none';
     }
 
     loadBlogPosts();
@@ -201,6 +213,24 @@ async function loadBlogPosts() {
     blogPostsContainer.appendChild(postDiv);
   });
 }
+
+// Submit new blog post
+submitPostBtn.addEventListener('click', async () => {
+  const content = newPostInput.value.trim();
+  if (!content) return alert('Post cannot be empty.');
+
+  try {
+    await db.collection('posts').add({
+      authorId: currentUserID,
+      content,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    newPostInput.value = '';
+    loadBlogPosts();
+  } catch(err) {
+    alert('Error posting blog: ' + err.message);
+  }
+});
 
 // Back button
 document.getElementById('back-btn').addEventListener('click', () => window.location.href = 'index.html');
