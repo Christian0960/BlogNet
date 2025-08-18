@@ -79,7 +79,6 @@
   <div id="friends-container"></div>
   <div id="friend-actions"></div>
 
-  <!-- New Blog Post Form -->
   <div id="new-post-container">
     <h2>New Blog Post</h2>
     <textarea id="new-post-input" placeholder="Write your post here..."></textarea>
@@ -133,6 +132,23 @@ const newPostInput = document.getElementById('new-post-input');
 const submitPostBtn = document.getElementById('submit-post-btn');
 const friendsContainer = document.getElementById('friends-container');
 const friendActions = document.getElementById('friend-actions');
+const newPostContainer = document.getElementById('new-post-container');
+
+// Friendly timestamp formatter
+function formatTimestamp(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  if(diffMins<1) return 'just now';
+  if(diffMins===1) return '1 minute ago';
+  if(diffMins<60) return `${diffMins} minutes ago`;
+  const diffHrs = Math.floor(diffMins/60);
+  if(diffHrs===1) return '1 hour ago';
+  if(diffHrs<24) return `${diffHrs} hours ago`;
+  const diffDays = Math.floor(diffHrs/24);
+  if(diffDays===1) return '1 day ago';
+  return `${diffDays} days ago`;
+}
 
 // Load profile
 async function loadProfile() {
@@ -154,6 +170,7 @@ async function loadProfile() {
         .forEach(el => el.disabled = true);
       saveBtn.style.display = 'none';
       submitPostBtn.style.display = 'none';
+      newPostContainer.style.display = 'none';
     }
 
     loadFriends();
@@ -216,9 +233,13 @@ async function loadFriends() {
 
   snapshot.forEach(doc => {
     const friend = doc.data();
-    const div = document.createElement('p');
-    div.textContent = friend.username || 'Unknown';
-    friendsContainer.appendChild(div);
+    const p = document.createElement('p');
+    if(friend.username){
+      p.innerHTML = `<a href="profile.html?user=${encodeURIComponent(doc.id)}">${friend.username}</a>`;
+    } else {
+      p.textContent = 'Unknown';
+    }
+    friendsContainer.appendChild(p);
   });
 }
 
@@ -227,7 +248,6 @@ async function setupFriendActions() {
   friendActions.innerHTML = '';
   if (isOwnProfile) return;
 
-  // Already friends?
   const friendDoc = await db.collection('users')
     .doc(currentUserID)
     .collection('friends')
@@ -239,7 +259,6 @@ async function setupFriendActions() {
     return;
   }
 
-  // Pending request?
   const pending = await db.collection('users')
     .doc(profileUserID)
     .collection('notifications')
@@ -252,7 +271,6 @@ async function setupFriendActions() {
     return;
   }
 
-  // Show button
   const btn = document.createElement('button');
   btn.textContent = '➕ Add Friend';
   btn.addEventListener('click', async () => {
@@ -274,7 +292,7 @@ async function setupFriendActions() {
   friendActions.appendChild(btn);
 }
 
-// Load profile blog posts only (nested collection)
+// Load profile blog posts
 async function loadBlogPosts() {
   blogPostsContainer.innerHTML = '';
   const snapshot = await db.collection('users')
@@ -287,13 +305,13 @@ async function loadBlogPosts() {
     const post = doc.data();
     const postDiv = document.createElement('div');
     postDiv.className = 'blog-post';
-    postDiv.innerHTML = `<div class="timestamp">${post.timestamp ? new Date(post.timestamp.toDate()).toLocaleString() : ''}</div>
+    postDiv.innerHTML = `<div class="timestamp">${post.timestamp ? formatTimestamp(post.timestamp.toDate()) : ''}</div>
                          <div class="content">${post.content}</div>`;
     blogPostsContainer.appendChild(postDiv);
   });
 }
 
-// Submit new blog post (nested collection)
+// Submit new blog post
 submitPostBtn.addEventListener('click', async () => {
   const content = newPostInput.value.trim();
   if (!content) return alert('Post cannot be empty.');
