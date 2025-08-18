@@ -109,13 +109,14 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
         <span id="notif-count">0</span>
         <div id="notif-panel"></div>
       </div>
+    </div>
   </nav>
 </header>
 
 <form id="post-form">
   <input type="text" id="username" placeholder="What's your name?" />
-  <textarea id="post-content" placeholder=" Have something to say?"></textarea>
-  <button type="submit" id="send it!">Post</button>
+  <textarea id="post-content" placeholder="Have something to say?"></textarea>
+  <button type="submit" id="submit-post">Post</button>
 </form>
 
 <main id="feed"></main>
@@ -130,7 +131,7 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 // ----------------------
 // Secret key for Firestore posts
 // ----------------------
-const SECRET_KEY = "MY_SECRET_KEY"; // must match Firestore rules
+const SECRET_KEY = "MY_SECRET_KEY";
 
 // ----------------------
 // Stable unique userId
@@ -166,8 +167,6 @@ const usernameInput = document.getElementById('username');
 const notifBtn = document.getElementById('notif-btn');
 const notifCount = document.getElementById('notif-count');
 const notifPanel = document.getElementById('notif-panel');
-const addFriendBtn = document.getElementById('add-friend-btn');
-const removeFriendBtn = document.getElementById('remove-friend-btn');
 
 let currentFilter = 'friends';
 let friendIds = new Set();
@@ -193,14 +192,17 @@ function formatTimestamp(date){
 }
 
 buttons.forEach(btn => {
-  btn.addEventListener('click', ()=>{
+  btn.addEventListener('click', ()=> {
     buttons.forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     currentFilter = btn.getAttribute('data-filter');
-    applyCurrentFilter();
+    fetchProfilePosts();
   });
 });
 
+// ----------------------
+// Friends subscription
+// ----------------------
 function subscribeFriends() {
   db.collection('users').doc(currentUserID).collection('friends')
     .where('status','==','accepted')
@@ -208,15 +210,18 @@ function subscribeFriends() {
       friendIds = new Set();
       snap.forEach(doc=>friendIds.add(doc.id));
       friendIds.add(currentUserID);
-      applyCurrentFilter();
+      fetchProfilePosts();
     });
 }
 subscribeFriends();
 
+// ----------------------
+// Fetch posts depending on filter
+// ----------------------
 let cachedPosts = [];
 const userCache = {};
 
-function fetchMissingUsers(authorIds) {
+async function fetchMissingUsers(authorIds) {
   const missing = authorIds.filter(id => !userCache[id]);
   if (!missing.length) return Promise.resolve();
   const chunks = [];
@@ -227,6 +232,16 @@ function fetchMissingUsers(authorIds) {
   ));
 }
 
+async function fetchProfilePosts() {
+  const postsRef = db.collection('users').doc(currentUserID).collection('profilePosts').orderBy('timestamp','desc');
+  const snapshot = await postsRef.get();
+  cachedPosts = snapshot.docs.map(d=>({id:d.id,data:d.data()}));
+
+  const authors=[...new Set(cachedPosts.map(p=>p.data.authorId).filter(Boolean))];
+  await fetchMissingUsers(authors);
+  renderFeed();
+}
+
 function renderFeed() {
   feed.innerHTML='';
   cachedPosts.forEach(p=>{
@@ -235,7 +250,7 @@ function renderFeed() {
     const userData = userCache[authorId] || { username: authorId, avatarURL: 'https://via.placeholder.com/40' };
     const article = document.createElement('article');
     article.className='post';
-    article.dataset.type = post.type || 'public';
+    article.dataset.type = post.type || 'profile';
     article.dataset.author = authorId;
     article.innerHTML=`
       <img src="${userData.avatarURL}" alt="avatar" class="profile-link" data-userid="${authorId}">
@@ -256,76 +271,18 @@ function renderFeed() {
 function applyCurrentFilter() {
   const posts = feed.querySelectorAll('.post');
   posts.forEach(el=>{
-    const type = el.dataset.type || 'public';
+    const type = el.dataset.type || 'profile';
     const author = el.dataset.author || '';
     let show=true;
-    if(currentFilter==='public') show = true;
+    if(currentFilter==='public') show = (type==='public');
     else if(currentFilter==='friends') show = friendIds.has(author);
-    else if(currentFilter==='unseen') show = (type==='public' && author!==currentUserID);
+    else if(currentFilter==='unseen') show = (type==='profile' && !friendIds.has(author));
     el.style.display = show?'flex':'none';
   });
 }
 
-db.collection('posts').orderBy('timestamp','desc').onSnapshot(async snapshot=>{
-  cachedPosts = snapshot.docs.map(d=>({id:d.id,data:d.data()}));
-  const authors=[...new Set(cachedPosts.map(p=>p.data.authorId).filter(Boolean))];
-  await fetchMissingUsers(authors);
-  renderFeed();
-});
-
-let notifUnreads=0;
-function subscribeNotifications() {
-  db.collection('users').doc(currentUserID).collection('notifications')
-    .orderBy('createdAt','desc')
-    .onSnapshot(snap=>{
-      const items=[];
-      notifUnreads=0;
-      snap.forEach(doc=>{
-        const n=doc.data();
-        items.push({id:doc.id,...n});
-        if(!n.read) notifUnreads++;
-      });
-      drawNotifications(items);
-    });
-}
-subscribeNotifications();
-
-function drawNotifications(items) {
-  notifCount.style.display = notifUnreads>0?'inline-block':'none';
-  notifCount.textContent = notifUnreads;
-  notifPanel.innerHTML='';
-  if(!items.length){
-    const empty=document.createElement('div'); empty.className='notif-empty';
-    empty.textContent='No notifications yet.'; notifPanel.appendChild(empty); return;
-  }
-  items.forEach(n=>{
-    const div=document.createElement('div');
-    div.className='notif-item'+(!n.read?' unread':'');
-    const when = n.createdAt ? formatTimestamp(n.createdAt.toDate()) : 'just now';
-    div.innerHTML=`<div>${n.text || '(no text)'}<div style="font-size:11px;color:#555;margin-top:4px;">${when}</div></div>`;
-    div.addEventListener('click', async ()=>{
-      await db.collection('users').doc(currentUserID).collection('notifications').doc(n.id)
-        .set({read:true},{merge:true});
-    });
-    notifPanel.appendChild(div);
-  });
-}
-
-notifBtn.addEventListener('click',async ()=>{
-  notifPanel.style.display = notifPanel.style.display==='block'?'none':'block';
-  if(notifPanel.style.display==='block'){
-    const snap = await db.collection('users').doc(currentUserID).collection('notifications').where('read','==',false).get();
-    const batch = db.batch();
-    snap.forEach(doc=> batch.set(doc.ref,{read:true},{merge:true}));
-    await batch.commit();
-  }
-});
-document.addEventListener('click',e=>{
-  if(!document.getElementById('notif-wrap').contains(e.target)) notifPanel.style.display='none';
-});
-
 // ----------------------
-// Posting (with SECRET_KEY)
+// Posting (profilePosts collection)
 // ----------------------
 form.addEventListener('submit',async e=>{
   e.preventDefault();
@@ -341,39 +298,17 @@ form.addEventListener('submit',async e=>{
     if(!userDoc.exists && !usernameCheck.empty) return alert('Username taken');
     await userRef.set({username:newUsername,avatarURL:existing.avatarURL||'https://via.placeholder.com/40'},{merge:true});
     
-    await db.collection('posts').add({
+    await db.collection('users').doc(currentUserID).collection('profilePosts').add({
       authorId:currentUserID,
       content:sanitizeText(content),
       timestamp:firebase.firestore.FieldValue.serverTimestamp(),
-      type:currentFilter,
+      type:'profile',
       key: SECRET_KEY
     });
     textarea.value='';
+    fetchProfilePosts();
   } catch(err){ alert('Error posting: '+err.message); }
-});
-
-addFriendBtn.addEventListener('click',async ()=>{
-  const uname = prompt('Enter username to add as friend:');
-  if(!uname) return;
-  const userSnap = await db.collection('users').where('username','==',uname).get();
-  if(userSnap.empty) return alert('User not found');
-  const friendId = userSnap.docs[0].id;
-  if(friendId===currentUserID) return alert('Cannot add yourself');
-  await db.collection('users').doc(currentUserID).collection('friends').doc(friendId)
-    .set({status:'pending',since:firebase.firestore.FieldValue.serverTimestamp()});
-  alert('Friend request sent!');
-});
-
-removeFriendBtn.addEventListener('click',async ()=>{
-  const uname = prompt('Enter username to remove from friends:');
-  if(!uname) return;
-  const userSnap = await db.collection('users').where('username','==',uname).get();
-  if(userSnap.empty) return alert('User not found');
-  const friendId = userSnap.docs[0].id;
-  await db.collection('users').doc(currentUserID).collection('friends').doc(friendId).delete();
-  alert('Friend removed!');
 });
 </script>
 </body>
 </html>
-
