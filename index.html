@@ -19,6 +19,7 @@ header {
 .logo { font-size:36px; color:#fff; font-weight:bold; }
 .tagline { font-size:18px; color:#ffe066; font-style:italic; font-weight:bold; text-shadow:1px 1px 0 #000033; }
 nav { display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wrap; }
+
 button.filter-btn {
   background:#ffcc00; border:2px solid #000080; border-radius:3px;
   padding:8px 14px; font-weight:bold; font-size:12px; cursor:pointer;
@@ -26,6 +27,30 @@ button.filter-btn {
 }
 button.filter-btn:hover { background:#ffff66; }
 button.filter-btn.active { background:#ffff99; border-color:#330066; box-shadow:2px 2px 4px #660099; }
+
+#profile-btn, #notif-btn {
+  background:#ffcc00; border:2px solid #000080; border-radius:3px;
+  padding:8px 10px; font-weight:bold; font-size:14px; cursor:pointer;
+  color:#000080; box-shadow:1px 1px 0 #333; transition:background 0.2s;
+}
+#profile-btn:hover, #notif-btn:hover { background:#ffff66; }
+
+#notif-wrap { position:relative; }
+#notif-count {
+  position:absolute; top:-6px; right:-6px; background:#e02424; color:#fff;
+  border-radius:10px; padding:2px 6px; font-size:11px; display:none;
+}
+#notif-panel {
+  position:absolute; right:0; top:42px; width:280px; max-height:320px; overflow:auto;
+  background:#ffffff; border:2px solid #9966ff; box-shadow:0 6px 14px rgba(0,0,0,0.25);
+  border-radius:6px; display:none; z-index:10;
+}
+.notif-item {
+  padding:10px; border-bottom:1px solid #eee; font-size:13px;
+}
+.notif-item.unread { background:#f5f0ff; font-weight:bold; }
+.notif-empty { padding:14px; text-align:center; color:#555; font-size:13px; }
+
 main {
   max-width:700px; margin:25px auto; padding:10px 20px;
   background:#ffffffcc; border:3px solid #3399ff;
@@ -46,6 +71,7 @@ button#submit-post {
   border-radius:4px; cursor:pointer; align-self:flex-end; transition:background 0.3s;
 }
 button#submit-post:hover { background:#7a3fcc; }
+
 .post {
   border:2px inset #99ccff; background:#e6f0ff; padding:15px; margin-bottom:20px;
   font-size:13px; font-family:'Courier New', monospace;
@@ -55,6 +81,7 @@ button#submit-post:hover { background:#7a3fcc; }
 .post-content { display:flex; flex-direction:column; }
 .post-content .author a { text-decoration:none; color:#000080; font-weight:bold; cursor:pointer; }
 .post-content .author a:hover { text-decoration:underline; }
+
 footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Courier New', monospace; color:#333; }
 </style>
 </head>
@@ -71,7 +98,16 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
       <button class="filter-btn" data-filter="unseen">Unseen</button>
       <button class="filter-btn" data-filter="public">Public</button>
     </div>
-    <a href="profile.html"><button id="profile-btn" title="Your Profile">👤</button></a>
+
+    <!-- Notifications + Profile -->
+    <div style="display:flex; gap:10px; align-items:center;">
+      <div id="notif-wrap">
+        <button id="notif-btn" title="Notifications">🔔</button>
+        <span id="notif-count">0</span>
+        <div id="notif-panel"></div>
+      </div>
+      <a href="profile.html"><button id="profile-btn" title="Your Profile">👤</button></a>
+    </div>
   </nav>
 </header>
 
@@ -90,13 +126,18 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
+// ----------------------
 // Stable unique userId
+// ----------------------
 let currentUserID = localStorage.getItem('userId');
 if (!currentUserID) {
   currentUserID = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
   localStorage.setItem('userId', currentUserID);
 }
 
+// ----------------------
+// Firebase init
+// ----------------------
 const firebaseConfig = {
   apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
   authDomain:"the-blog-network.firebaseapp.com",
@@ -108,21 +149,32 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// ----------------------
+// UI refs
+// ----------------------
 const buttons = document.querySelectorAll('.filter-btn');
 const feed = document.getElementById('feed');
 const form = document.getElementById('post-form');
 const textarea = document.getElementById('post-content');
 const usernameInput = document.getElementById('username');
+const notifBtn = document.getElementById('notif-btn');
+const notifCount = document.getElementById('notif-count');
+const notifPanel = document.getElementById('notif-panel');
+
 let currentFilter = 'friends';
 
 // Load username from localStorage
 if(localStorage.getItem('username')) usernameInput.value = localStorage.getItem('username');
 
+// ----------------------
 // Bad words filter
+// ----------------------
 const badWords=['nigger','retard','shit','nigga','fuck','bitch','bastard','crap','douche','dick','cunt','cock','pussy','tits','dickhead','slut','whore','motherfucker'];
 function sanitizeText(text){let s=text;badWords.forEach(w=>{s=s.replace(new RegExp(`\\b${w}\\b`,'gi'),'****')});return s;}
 
-// Format timestamps
+// ----------------------
+// Time helper
+// ----------------------
 function formatTimestamp(date){
   const now=new Date();
   const diffMs=now-date;
@@ -138,52 +190,75 @@ function formatTimestamp(date){
   return `${diffDays} days ago`;
 }
 
-// Filter buttons
+// -------------------------------------
+// Filter buttons (friends/public/unseen)
+// -------------------------------------
 buttons.forEach(btn => {
   btn.addEventListener('click', ()=>{
     buttons.forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     currentFilter = btn.getAttribute('data-filter');
-    filterPosts(currentFilter);
+    applyCurrentFilter();
   });
 });
 
-function filterPosts(filter){
-  const posts = feed.querySelectorAll('.post');
-  posts.forEach(post => post.getAttribute('data-type') === filter || filter === 'public' ? post.style.display='flex' : post.style.display='none');
+// -------------------------------------
+// FRIENDS: store & listen
+// Structure: users/{uid}/friends/{friendUid} => {status:"accepted", since:Timestamp}
+// -------------------------------------
+let friendIds = new Set(); // accepted friends of current user
+
+function subscribeFriends() {
+  db.collection('users').doc(currentUserID).collection('friends')
+    .where('status','==','accepted')
+    .onSnapshot((snap)=>{
+      friendIds = new Set();
+      snap.forEach(doc=>friendIds.add(doc.id));
+      // Always include yourself so your posts appear in Friends
+      friendIds.add(currentUserID);
+      applyCurrentFilter();
+    });
+}
+subscribeFriends();
+
+// -------------------------------------
+// POSTS: live listener (still reads all,
+// then we filter client-side to keep it simple)
+// -------------------------------------
+let cachedPosts = []; // {id, data, userData}
+
+const userCache = {}; // authorId -> user doc
+function fetchMissingUsers(authorIds) {
+  const missing = authorIds.filter(id => !userCache[id]);
+  if (missing.length === 0) return Promise.resolve();
+  // Firestore 'in' limit: keep it simple/batch if needed
+  const chunks = [];
+  while (missing.length) chunks.push(missing.splice(0,10));
+  return Promise.all(chunks.map(list =>
+    db.collection('users')
+      .where(firebase.firestore.FieldPath.documentId(), 'in', list)
+      .get()
+      .then(s => s.forEach(u => userCache[u.id] = u.data() || {}))
+  ));
 }
 
-// Cache for user profiles
-const userCache = {};
-
-// Render posts
-async function renderPosts(snapshot){
-  feed.innerHTML='';
-  const postDocs = snapshot.docs;
-  const missingUsers = [];
-
-  postDocs.forEach(doc=>{
-    const data = doc.data();
-    if(data.authorId && !userCache[data.authorId] && !missingUsers.includes(data.authorId)) missingUsers.push(data.authorId);
-  });
-
-  if(missingUsers.length > 0){
-    const usersSnap = await db.collection('users').where(firebase.firestore.FieldPath.documentId(), 'in', missingUsers).get();
-    usersSnap.forEach(u=>userCache[u.id]=u.data());
-  }
-
-  postDocs.forEach(doc=>{
-    const post = doc.data();
+function renderFeed() {
+  feed.innerHTML = '';
+  cachedPosts.forEach(p => {
+    const post = p.data;
     const authorId = post.authorId || 'friend_alpha';
     const userData = userCache[authorId] || { username: authorId, avatarURL: 'https://via.placeholder.com/40' };
+
     const article = document.createElement('article');
     article.className='post';
-    article.setAttribute('data-type', post.type || 'friends');
-    article.innerHTML=`
-      <img src="${userData.avatarURL}" alt="avatar" class="profile-link" data-userid="${authorId}">
+    article.dataset.type = post.type || 'public';
+    article.dataset.author = authorId;
+
+    article.innerHTML = `
+      <img src="${userData.avatarURL || 'https://via.placeholder.com/40'}" alt="avatar" class="profile-link" data-userid="${authorId}">
       <div class="post-content">
         <div class="author">
-          <a href="profile.html?user=${encodeURIComponent(authorId)}">${userData.username}</a>
+          <a href="profile.html?user=${encodeURIComponent(authorId)}">${userData.username || authorId}</a>
         </div>
         <div class="timestamp">${post.timestamp?formatTimestamp(post.timestamp.toDate()):''}</div>
         <div class="content">${post.content}</div>
@@ -191,38 +266,137 @@ async function renderPosts(snapshot){
     `;
     feed.appendChild(article);
 
-    // Add click listener to avatar
-    article.querySelectorAll('.profile-link').forEach(img => {
-      img.addEventListener('click', () => {
-        const userId = img.dataset.userid;
-        window.location.href = `profile.html?user=${encodeURIComponent(userId)}`;
+    article.querySelectorAll('.profile-link').forEach(img=>{
+      img.addEventListener('click', ()=>{
+        const uid = img.dataset.userid;
+        window.location.href = `profile.html?user=${encodeURIComponent(uid)}`;
       });
     });
   });
 
-  filterPosts(currentFilter);
+  applyCurrentFilter();
 }
 
-// Listen for posts
-db.collection('posts').orderBy('timestamp','desc').onSnapshot(renderPosts);
+function applyCurrentFilter() {
+  const posts = feed.querySelectorAll('.post');
+  posts.forEach(el=>{
+    const type = el.dataset.type || 'public';
+    const author = el.dataset.author || '';
+    let show = true;
 
-// Handle new post
+    if (currentFilter === 'public') {
+      show = (type === 'public');
+    } else if (currentFilter === 'friends') {
+      // Only show if author is in your accepted friends (or you)
+      show = friendIds.has(author);
+    } else if (currentFilter === 'unseen') {
+      // Simple placeholder: show public posts you didn't author
+      show = (type === 'public' && author !== currentUserID);
+    }
+
+    el.style.display = show ? 'flex' : 'none';
+  });
+}
+
+db.collection('posts').orderBy('timestamp','desc').onSnapshot(async (snapshot)=>{
+  cachedPosts = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
+  const authors = [...new Set(cachedPosts.map(p => p.data.authorId).filter(Boolean))];
+  await fetchMissingUsers(authors);
+  renderFeed();
+});
+
+// -------------------------------------
+// Notifications (very simple)
+// Structure: users/{uid}/notifications/{notifId} => {text, type, createdAt, read:false}
+// -------------------------------------
+let notifUnreads = 0;
+
+function subscribeNotifications() {
+  db.collection('users').doc(currentUserID).collection('notifications')
+    .orderBy('createdAt','desc')
+    .onSnapshot((snap)=>{
+      const items = [];
+      notifUnreads = 0;
+      snap.forEach(doc=>{
+        const n = doc.data();
+        items.push({ id: doc.id, ...n });
+        if (!n.read) notifUnreads++;
+      });
+      drawNotifications(items);
+    });
+}
+subscribeNotifications();
+
+function drawNotifications(items) {
+  // Count bubble
+  if (notifUnreads > 0) {
+    notifCount.textContent = String(notifUnreads);
+    notifCount.style.display = 'inline-block';
+  } else {
+    notifCount.style.display = 'none';
+  }
+
+  // Panel
+  notifPanel.innerHTML = '';
+  if (items.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'notif-empty';
+    empty.textContent = 'No notifications yet.';
+    notifPanel.appendChild(empty);
+    return;
+  }
+
+  items.forEach(n=>{
+    const div = document.createElement('div');
+    div.className = 'notif-item' + (n.read ? '' : ' unread');
+    const when = n.createdAt ? formatTimestamp(n.createdAt.toDate()) : 'just now';
+    div.innerHTML = `<div>${n.text || '(no text)'}<div style="font-size:11px;color:#555;margin-top:4px;">${when}</div></div>`;
+    div.addEventListener('click', async ()=>{
+      // mark single as read
+      await db.collection('users').doc(currentUserID).collection('notifications').doc(n.id).set({ read:true }, { merge:true });
+    });
+    notifPanel.appendChild(div);
+  });
+}
+
+notifBtn.addEventListener('click', async ()=>{
+  // toggle panel
+  notifPanel.style.display = (notifPanel.style.display === 'block') ? 'none' : 'block';
+
+  // mark all visible as read
+  if (notifPanel.style.display === 'block') {
+    const snap = await db.collection('users').doc(currentUserID).collection('notifications')
+      .where('read','==',false).get();
+    const batch = db.batch();
+    snap.forEach(doc=> batch.set(doc.ref, { read:true }, { merge:true }));
+    await batch.commit();
+  }
+});
+
+// Click outside to close notifications
+document.addEventListener('click',(e)=>{
+  const wrap = document.getElementById('notif-wrap');
+  if (!wrap.contains(e.target)) notifPanel.style.display = 'none';
+});
+
+// -------------------------------------
+// Handle new post (unchanged, still uses "posts" collection)
+// -------------------------------------
 form.addEventListener('submit', async e=>{
   e.preventDefault();
   const content = textarea.value.trim();
   if(!content) return alert('Please write something before posting!');
 
-  const newUsername = usernameInput.value.trim() || 'friend_alpha';
-  
-  // Save locally
+  const newUsername = (usernameInput.value.trim() || 'friend_alpha');
   localStorage.setItem('username', newUsername);
 
   try {
-    // Load user document
-    const userDoc = await db.collection('users').doc(currentUserID).get();
+    // Ensure user doc exists/updated for avatar + username
+    const userDocRef = db.collection('users').doc(currentUserID);
+    const userDoc = await userDocRef.get();
     const existingData = userDoc.exists ? userDoc.data() : {};
-    
-    // Check if username is taken by another user
+
+    // If username already used by a different user, block
     const usernameCheck = await db.collection('users')
       .where('username', '==', newUsername)
       .get();
@@ -230,13 +404,12 @@ form.addEventListener('submit', async e=>{
       return alert('Username already taken! Choose another.');
     }
 
-    // Save/update user with stable ID
-    await db.collection('users').doc(currentUserID).set({
+    await userDocRef.set({
       username: newUsername,
       avatarURL: existingData.avatarURL || 'https://via.placeholder.com/40'
     }, { merge: true });
 
-    // Add post
+    // Add post to main feed (respect currentFilter as "type" meta only)
     await db.collection('posts').add({
       authorId: currentUserID,
       content: sanitizeText(content),
