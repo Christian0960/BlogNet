@@ -79,7 +79,6 @@
   <div id="friends-container"></div>
   <div id="friend-actions"></div>
 
-  <!-- New Blog Post Form -->
   <div id="new-post-container">
     <h2>New Blog Post</h2>
     <textarea id="new-post-input" placeholder="Write your post here..."></textarea>
@@ -164,20 +163,30 @@ async function loadProfile() {
   }
 }
 
-// Save profile changes
+// Save profile changes with old username cleanup
 saveBtn.addEventListener('click', async () => {
-  const username = usernameInput.value.trim();
-  if (!username) return alert('Username cannot be empty.');
+  const newUsername = usernameInput.value.trim();
+  if (!newUsername) return alert('Username cannot be empty.');
 
   try {
     const usernameCheck = await db.collection('users')
-      .where('username', '==', username)
+      .where('username', '==', newUsername)
       .get();
     const isTaken = !usernameCheck.empty && !(usernameCheck.docs.length === 1 && usernameCheck.docs[0].id === currentUserID);
     if (isTaken) return alert('Username already taken! Choose another.');
 
+    // Delete old username record if changed
+    const currentDoc = await db.collection('users').doc(currentUserID).get();
+    const oldUsername = currentDoc.exists ? currentDoc.data().username : null;
+    if (oldUsername && oldUsername !== newUsername) {
+      await db.collection('usernames').doc(oldUsername).delete().catch(()=>{});
+    }
+
+    // Update new username record
+    await db.collection('usernames').doc(newUsername).set({userId: currentUserID});
+
     const profileData = {
-      username,
+      username: newUsername,
       bio: bioInput.value.trim(),
       favoriteMovie: movieInput.value.trim(),
       favoriteSong: songInput.value.trim(),
@@ -227,7 +236,6 @@ async function setupFriendActions() {
   friendActions.innerHTML = '';
   if (isOwnProfile) return;
 
-  // Already friends?
   const friendDoc = await db.collection('users')
     .doc(currentUserID)
     .collection('friends')
@@ -239,7 +247,6 @@ async function setupFriendActions() {
     return;
   }
 
-  // Pending request?
   const pending = await db.collection('users')
     .doc(profileUserID)
     .collection('notifications')
@@ -252,7 +259,6 @@ async function setupFriendActions() {
     return;
   }
 
-  // Show button
   const btn = document.createElement('button');
   btn.textContent = '➕ Add Friend';
   btn.addEventListener('click', async () => {
@@ -274,7 +280,7 @@ async function setupFriendActions() {
   friendActions.appendChild(btn);
 }
 
-// Load profile blog posts only (nested collection)
+// Load profile blog posts
 async function loadBlogPosts() {
   blogPostsContainer.innerHTML = '';
   const snapshot = await db.collection('users')
@@ -293,7 +299,7 @@ async function loadBlogPosts() {
   });
 }
 
-// Submit new blog post (nested collection)
+// Submit new blog post
 submitPostBtn.addEventListener('click', async () => {
   const content = newPostInput.value.trim();
   if (!content) return alert('Post cannot be empty.');
