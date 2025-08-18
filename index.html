@@ -17,9 +17,11 @@ button.filter-btn.active { background:#ffff99; border-color:#330066; box-shadow:
 #notif-wrap { position:relative; }
 #notif-count { position:absolute; top:-6px; right:-6px; background:#e02424; color:#fff; border-radius:10px; padding:2px 6px; font-size:11px; display:none; }
 #notif-panel { position:absolute; right:0; top:42px; width:280px; max-height:320px; overflow:auto; background:#ffffff; border:2px solid #9966ff; box-shadow:0 6px 14px rgba(0,0,0,0.25); border-radius:6px; display:none; z-index:10; }
-.notif-item { padding:10px; border-bottom:1px solid #eee; font-size:13px; }
+.notif-item { padding:10px; border-bottom:1px solid #eee; font-size:13px; display:flex; justify-content:space-between; align-items:center; }
 .notif-item.unread { background:#f5f0ff; font-weight:bold; }
 .notif-empty { padding:14px; text-align:center; color:#555; font-size:13px; }
+.notif-item button { margin-left:5px; background:#3399ff; border:none; color:white; padding:2px 6px; border-radius:3px; cursor:pointer; font-size:12px; }
+.notif-item button:hover { background:#2277cc; }
 main { max-width:700px; margin:25px auto; padding:10px 20px; background:#ffffffcc; border:3px solid #3399ff; box-shadow:0 4px 10px rgba(0,0,0,0.2); border-radius:6px; min-height:300px; }
 form#post-form { max-width:700px; margin:0 auto 25px auto; background:#ffffffcc; padding:15px 20px; border:3px solid #9966ff; border-radius:6px; box-shadow:0 4px 8px rgba(153,102,255,0.5); display:flex; flex-direction:column; }
 input#username, textarea#post-content, select#post-type { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; margin-bottom:8px; }
@@ -105,47 +107,42 @@ let currentFilter='friends';
 let friendIds=new Set();
 if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
-function sanitizeText(text){return text;} // simplified for demo
+function sanitizeText(text){return text;} // simplified
 function formatTimestamp(date){const now=new Date();const diffMs=now-date;const diffMins=Math.floor(diffMs/60000);if(diffMins<1)return'just now';if(diffMins===1)return'1 minute ago';if(diffMins<60)return`${diffMins} minutes ago`;const diffHrs=Math.floor(diffMins/60);if(diffHrs===1)return'1 hour ago';if(diffHrs<24)return`${diffHrs} hours ago`;const diffDays=Math.floor(diffHrs/24);if(diffDays===1)return'1 day ago';return`${diffDays} days ago`;}
 
+// Header buttons
 buttons.forEach(btn=>{btn.addEventListener('click',()=>{buttons.forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentFilter=btn.getAttribute('data-filter'); applyCurrentFilter(); });});
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
 
 // Subscribe friends
 function subscribeFriends(){
   db.collection('users').doc(currentUserID).collection('friends').where('status','==','accepted')
-    .onSnapshot(snap=>{ friendIds=new Set(); snap.forEach(doc=>friendIds.add(doc.id)); friendIds.add(currentUserID); fetchPosts(); });
+    .onSnapshot(snap=>{ friendIds=new Set(); snap.forEach(doc=>friendIds.add(doc.id)); friendIds.add(currentUserID); fetchPosts(); fetchNotifications(); });
 }
 subscribeFriends();
 
 // Fetch posts
 let cachedPosts=[];
 const userCache={};
-
 async function fetchMissingUsers(authorIds){
   const missing=authorIds.filter(id=>!userCache[id]);
-  if(!missing.length)return;
+  if(!missing.length) return;
   const chunks=[]; while(missing.length) chunks.push(missing.splice(0,10));
   await Promise.all(chunks.map(list=>db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',list).get().then(s=>s.forEach(u=>userCache[u.id]=u.data()||{}))));
 }
 
 async function fetchPosts(){
-  // profile posts
   const postsPromises = [...friendIds].map(uid=>db.collection('users').doc(uid).collection('profilePosts').orderBy('timestamp','desc').get());
   const profileSnaps = await Promise.all(postsPromises);
   const profilePosts = profileSnaps.flatMap(snap => snap.docs.map(d=>({id:d.id,data:d.data(), type:'profile'})));
-
-  // public posts
   const publicSnap = await db.collection('publicPosts').orderBy('timestamp','desc').get();
   const publicPosts = publicSnap.docs.map(d=>({id:d.id,data:d.data(), type:'public'}));
-
   cachedPosts = [...profilePosts, ...publicPosts];
   const authors=[...new Set(cachedPosts.map(p=>p.data.authorId).filter(Boolean))];
   await fetchMissingUsers(authors);
   renderFeed();
 }
 
-// Render feed
 function renderFeed(){
   feed.innerHTML='';
   cachedPosts.forEach(p=>{
@@ -191,35 +188,52 @@ form.addEventListener('submit', async e=>{
   const newUsername=usernameInput.value.trim()||'friend_alpha';
   localStorage.setItem('username',newUsername);
   const type=postTypeSelect.value;
-
   try{
     const userRef=db.collection('users').doc(currentUserID);
     const userDoc=await userRef.get();
     const existing=userDoc.exists?userDoc.data():{};
     await userRef.set({username:newUsername, avatarURL:existing.avatarURL||'https://via.placeholder.com/40'},{merge:true});
-
     if(type==='profile'){
-      await db.collection('users').doc(currentUserID).collection('profilePosts').add({
-        authorId:currentUserID,
-        content:sanitizeText(content),
-        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
-        type:'profile',
-        key:SECRET_KEY
-      });
+      await db.collection('users').doc(currentUserID).collection('profilePosts').add({authorId:currentUserID, content:sanitizeText(content), timestamp:firebase.firestore.FieldValue.serverTimestamp(), type:'profile', key:SECRET_KEY});
     } else {
-      await db.collection('publicPosts').add({
-        authorId:currentUserID,
-        content:sanitizeText(content),
-        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
-        type:'public',
-        key:SECRET_KEY
-      });
+      await db.collection('publicPosts').add({authorId:currentUserID, content:sanitizeText(content), timestamp:firebase.firestore.FieldValue.serverTimestamp(), type:'public', key:SECRET_KEY});
     }
     textarea.value='';
     fetchPosts();
   }catch(err){alert('Error posting: '+err.message);}
 });
+
+// --- NOTIFICATIONS & FRIEND REQUESTS ---
+notifBtn.addEventListener('click',()=>{ notifPanel.style.display = notifPanel.style.display==='none'?'block':'none'; });
+
+async function fetchNotifications(){
+  const notifSnap = await db.collection('users').doc(currentUserID).collection('friendRequests').orderBy('timestamp','desc').get();
+  notifPanel.innerHTML='';
+  if(notifSnap.empty){ notifPanel.innerHTML='<div class="notif-empty">No notifications</div>'; notifCount.style.display='none'; return; }
+  notifCount.style.display='inline';
+  notifCount.textContent = notifSnap.size;
+  notifSnap.forEach(doc=>{
+    const data=doc.data();
+    const div=document.createElement('div');
+    div.className='notif-item unread';
+    div.innerHTML=`<span>${data.fromUsername || 'Unknown'} sent a friend request</span>`;
+    const acceptBtn=document.createElement('button'); acceptBtn.textContent='Accept';
+    const rejectBtn=document.createElement('button'); rejectBtn.textContent='Reject';
+    acceptBtn.onclick = async ()=>{
+      await db.collection('users').doc(currentUserID).collection('friends').doc(doc.id).set({status:'accepted'});
+      await db.collection('users').doc(doc.id).collection('friends').doc(currentUserID).set({status:'accepted'});
+      await db.collection('users').doc(currentUserID).collection('friendRequests').doc(doc.id).delete();
+      fetchNotifications();
+      subscribeFriends();
+    };
+    rejectBtn.onclick = async ()=>{
+      await db.collection('users').doc(currentUserID).collection('friendRequests').doc(doc.id).delete();
+      fetchNotifications();
+    };
+    div.appendChild(acceptBtn); div.appendChild(rejectBtn);
+    notifPanel.appendChild(div);
+  });
+}
 </script>
 </body>
 </html>
-
