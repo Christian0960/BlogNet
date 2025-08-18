@@ -89,12 +89,17 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Use stable unique userId
+// Stable unique userId
 let currentUserID = localStorage.getItem('userId');
 if (!currentUserID) {
   currentUserID = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
   localStorage.setItem('userId', currentUserID);
 }
+
+// Check URL for ?user=OTHER_USER_ID
+const urlParams = new URLSearchParams(window.location.search);
+const profileUserID = urlParams.get('user') || currentUserID;
+const isOwnProfile = profileUserID === currentUserID;
 
 // Elements
 const usernameInput = document.getElementById('username-input');
@@ -108,20 +113,27 @@ const saveBtn = document.getElementById('save-btn');
 const avatarPreview = document.getElementById('avatar-preview');
 const main = document.getElementById('profile-main');
 
-// Load profile from Firestore using stable userId
+// Load profile
 async function loadProfile() {
   try {
-    const doc = await db.collection('users').doc(currentUserID).get();
+    const doc = await db.collection('users').doc(profileUserID).get();
     const data = doc.exists ? doc.data() : {};
-    usernameInput.value = data.username || localStorage.getItem('username') || '';
-    bioInput.value = data.bio || localStorage.getItem('bio') || '';
-    movieInput.value = data.favoriteMovie || localStorage.getItem('favoriteMovie') || '';
-    songInput.value = data.favoriteSong || localStorage.getItem('favoriteSong') || '';
-    birthdayInput.value = data.birthday || localStorage.getItem('birthday') || '';
-    avatarInput.value = data.avatarURL || localStorage.getItem('avatarURL') || '';
-    wallpaperSelect.value = data.wallpaper || localStorage.getItem('wallpaper') || '#f0f4ff';
+    usernameInput.value = data.username || '';
+    bioInput.value = data.bio || '';
+    movieInput.value = data.favoriteMovie || '';
+    songInput.value = data.favoriteSong || '';
+    birthdayInput.value = data.birthday || '';
+    avatarInput.value = data.avatarURL || '';
+    wallpaperSelect.value = data.wallpaper || '#f0f4ff';
     avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
     main.style.background = wallpaperSelect.value;
+
+    // If viewing someone else's profile, disable editing
+    if (!isOwnProfile) {
+      [usernameInput, bioInput, movieInput, songInput, birthdayInput, avatarInput, wallpaperSelect, saveBtn]
+        .forEach(el => el.disabled = true);
+      saveBtn.style.display = 'none';
+    }
   } catch(err){
     console.error('Error loading profile:', err);
   }
@@ -133,7 +145,6 @@ saveBtn.addEventListener('click', async () => {
   if (!username) return alert('Username cannot be empty.');
 
   try {
-    // Check if username is already taken by another user
     const usernameCheck = await db.collection('users')
       .where('username', '==', username)
       .get();
@@ -150,13 +161,10 @@ saveBtn.addEventListener('click', async () => {
       wallpaper: wallpaperSelect.value
     };
 
-    // Save locally
     Object.keys(profileData).forEach(key => localStorage.setItem(key, profileData[key]));
-
-    // Save to Firestore under stable userId
     await db.collection('users').doc(currentUserID).set(profileData, { merge: true });
-    alert('Profile updated!');
 
+    alert('Profile updated!');
     avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
     main.style.background = wallpaperSelect.value;
   } catch(err) {
@@ -164,23 +172,16 @@ saveBtn.addEventListener('click', async () => {
   }
 });
 
-// Avatar preview
-avatarInput.addEventListener('input', () => {
-  avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
-});
-
-// Wallpaper preview
-wallpaperSelect.addEventListener('change', () => {
-  main.style.background = wallpaperSelect.value;
-});
+// Avatar & wallpaper preview
+avatarInput.addEventListener('input', () => avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150');
+wallpaperSelect.addEventListener('change', () => main.style.background = wallpaperSelect.value);
 
 // Back button
-document.getElementById('back-btn').addEventListener('click', () => {
-  window.location.href = 'index.html';
-});
+document.getElementById('back-btn').addEventListener('click', () => window.location.href = 'index.html');
 
 // Initial load
 loadProfile();
 </script>
 </body>
 </html>
+
