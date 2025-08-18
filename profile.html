@@ -132,29 +132,36 @@ saveBtn.addEventListener('click', async () => {
   const username = usernameInput.value.trim();
   if (!username) return alert('Username cannot be empty.');
 
-  const profileData = {
-    username,
-    bio: bioInput.value.trim(),
-    favoriteMovie: movieInput.value.trim(),
-    favoriteSong: songInput.value.trim(),
-    birthday: birthdayInput.value,
-    avatarURL: avatarInput.value.trim(),
-    wallpaper: wallpaperSelect.value
-  };
-
-  // Save locally
-  Object.keys(profileData).forEach(key => localStorage.setItem(key, profileData[key]));
-
-  // Save to Firestore under stable userId
   try {
+    // Check if username is already taken by another user
+    const usernameCheck = await db.collection('users')
+      .where('username', '==', username)
+      .get();
+    const isTaken = !usernameCheck.empty && !(usernameCheck.docs.length === 1 && usernameCheck.docs[0].id === currentUserID);
+    if (isTaken) return alert('Username already taken! Choose another.');
+
+    const profileData = {
+      username,
+      bio: bioInput.value.trim(),
+      favoriteMovie: movieInput.value.trim(),
+      favoriteSong: songInput.value.trim(),
+      birthday: birthdayInput.value,
+      avatarURL: avatarInput.value.trim(),
+      wallpaper: wallpaperSelect.value
+    };
+
+    // Save locally
+    Object.keys(profileData).forEach(key => localStorage.setItem(key, profileData[key]));
+
+    // Save to Firestore under stable userId
     await db.collection('users').doc(currentUserID).set(profileData, { merge: true });
     alert('Profile updated!');
+
+    avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
+    main.style.background = wallpaperSelect.value;
   } catch(err) {
     alert('Error saving profile: ' + err.message);
   }
-
-  avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
-  main.style.background = wallpaperSelect.value;
 });
 
 // Avatar preview
