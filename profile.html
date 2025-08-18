@@ -146,7 +146,6 @@ async function loadProfile() {
     avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
     main.style.background = wallpaperSelect.value;
 
-    // Disable editing if viewing someone else's profile
     if (!isOwnProfile) {
       [usernameInput, bioInput, movieInput, songInput, birthdayInput, avatarInput, wallpaperSelect, saveBtn, newPostInput, submitPostBtn]
         .forEach(el => el.disabled = true);
@@ -223,8 +222,8 @@ submitPostBtn.addEventListener('click', async () => {
     await db.collection('posts').add({
       authorId: currentUserID,
       content,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      key: "MY_SECRET_KEY"
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      key: "MY_SECRET_KEY"  // <-- added comma and key
     });
     newPostInput.value = '';
     loadBlogPosts();
@@ -241,4 +240,3 @@ loadProfile();
 </script>
 </body>
 </html>
-
