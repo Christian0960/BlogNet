@@ -14,7 +14,7 @@ nav { display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wra
 button.filter-btn, #profile-btn, #dm-btn { background:#ffcc00; border:2px solid #000080; border-radius:3px; padding:8px 10px; font-weight:bold; font-size:14px; cursor:pointer; color:#000080; box-shadow:1px 1px 0 #333; transition:background 0.2s; position:relative; }
 button.filter-btn:hover, #profile-btn:hover, #dm-btn:hover { background:#ffff66; }
 button.filter-btn.active { background:#ffff99; border-color:#330066; box-shadow:2px 2px 4px #660099; }
-#dm-btn .red-dot { position:absolute; top:2px; right:2px; width:10px; height:10px; background:red; border-radius:50%; display:none; }
+#dm-btn .dot { position:absolute; top:0; right:0; width:10px; height:10px; background:red; border-radius:50%; display:none; }
 main { max-width:700px; margin:25px auto; padding:10px 20px; background:#ffffffcc; border:3px solid #3399ff; box-shadow:0 4px 10px rgba(0,0,0,0.2); border-radius:6px; min-height:300px; }
 form#post-form { max-width:700px; margin:0 auto 25px auto; background:#ffffffcc; padding:15px 20px; border:3px solid #9966ff; border-radius:6px; box-shadow:0 4px 8px rgba(153,102,255,0.5); display:flex; flex-direction:column; }
 input#username, textarea#post-content, select#post-type { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; margin-bottom:8px; }
@@ -44,7 +44,7 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
     </div>
     <div style="display:flex; gap:10px; align-items:center;">
       <button id="profile-btn" title="Profile">👤</button>
-      <button id="dm-btn" title="Direct Messages">✉️<span class="red-dot"></span></button>
+      <button id="dm-btn" title="Direct Messages">✉️<span class="dot"></span></button>
     </div>
   </nav>
 </header>
@@ -89,7 +89,7 @@ const usernameInput=document.getElementById('username');
 const postTypeSelect=document.getElementById('post-type');
 const profileBtn=document.getElementById('profile-btn');
 const dmBtn=document.getElementById('dm-btn');
-const dmDot = dmBtn.querySelector('.red-dot');
+const dmDot = dmBtn.querySelector('.dot');
 
 let currentFilter='friends';
 let friendIds=new Set();
@@ -122,10 +122,12 @@ buttons.forEach(btn=>{
   });
 });
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
-dmBtn.addEventListener('click',()=>{ 
-  // Mark messages as seen
-  db.collection('users').doc(currentUserID).set({lastCheckedDM: firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-  window.location.href='messages.html'; 
+dmBtn.addEventListener('click',async ()=>{
+  // Mark all DMs as seen
+  const now = firebase.firestore.Timestamp.now();
+  await db.collection('users').doc(currentUserID).set({lastCheckedDM:now},{merge:true});
+  dmDot.style.display='none';
+  window.location.href='messages.html';
 });
 
 // Subscribe friends
@@ -137,31 +139,11 @@ function subscribeFriends(){
     // Load last seen timestamps
     db.collection('users').doc(currentUserID).get().then(doc=>{
       if(doc.exists && doc.data().lastSeen) lastSeenMap=doc.data().lastSeen;
-      if(doc.exists && doc.data().lastCheckedDM) lastCheckedDM = doc.data().lastCheckedDM.toDate();
-      else lastCheckedDM = new Date(0);
       fetchPosts();
-      subscribeDMNotifications();
     });
   });
 }
 subscribeFriends();
-
-// --- DM Notification ---
-let lastCheckedDM;
-function subscribeDMNotifications(){
-  db.collection('users').doc(currentUserID).collection('dms').onSnapshot(snap=>{
-    let hasUnread = false;
-    snap.forEach(chatDoc=>{
-      chatDoc.ref.collection('messages').orderBy('timestamp','desc').limit(1).get().then(msgSnap=>{
-        msgSnap.forEach(msg=>{
-          const ts = msg.data().timestamp ? msg.data().timestamp.toDate() : new Date(0);
-          if(ts > lastCheckedDM && msg.data().senderID !== currentUserID) hasUnread = true;
-          dmDot.style.display = hasUnread ? 'block' : 'none';
-        });
-      });
-    });
-  });
-}
 
 // Fetch posts
 let cachedPosts=[];
@@ -253,6 +235,28 @@ form.addEventListener('submit', async e=>{
     textarea.value='';
     fetchPosts();
   }catch(err){alert('Error posting: '+err.message);}
+});
+
+// --- DM Red Dot Notifications ---
+let lastCheckedDM;
+db.collection('users').doc(currentUserID).get().then(doc=>{
+  if(doc.exists && doc.data().lastCheckedDM) lastCheckedDM = doc.data().lastCheckedDM.toDate();
+  else lastCheckedDM = new Date(0);
+
+  db.collection('users').doc(currentUserID).collection('dms')
+    .onSnapshot(snap=>{
+      let hasUnread = false;
+      snap.forEach(chatDoc=>{
+        chatDoc.ref.collection('messages').orderBy('timestamp','desc').limit(1)
+          .onSnapshot(msgSnap=>{
+            msgSnap.forEach(msg=>{
+              const ts = msg.data().timestamp ? msg.data().timestamp.toDate() : new Date(0);
+              if(ts > lastCheckedDM && msg.data().senderID !== currentUserID) hasUnread = true;
+              dmDot.style.display = hasUnread ? 'block' : 'none';
+            });
+          });
+      });
+    });
 });
 </script>
 </body>
