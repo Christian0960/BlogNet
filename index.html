@@ -107,17 +107,42 @@ let currentFilter='friends';
 let friendIds=new Set();
 if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
-function sanitizeText(text){return text;} // simplified
-function formatTimestamp(date){const now=new Date();const diffMs=now-date;const diffMins=Math.floor(diffMs/60000);if(diffMins<1)return'just now';if(diffMins===1)return'1 minute ago';if(diffMins<60)return`${diffMins} minutes ago`;const diffHrs=Math.floor(diffMins/60);if(diffHrs===1)return'1 hour ago';if(diffHrs<24)return`${diffHrs} hours ago`;const diffDays=Math.floor(diffHrs/24);if(diffDays===1)return'1 day ago';return`${diffDays} days ago`;}
+function sanitizeText(text){return text;}
+function formatTimestamp(date){
+  const now=new Date(); const diffMs=now-date;
+  const diffMins=Math.floor(diffMs/60000);
+  if(diffMins<1)return'just now';
+  if(diffMins===1)return'1 minute ago';
+  if(diffMins<60)return`${diffMins} minutes ago`;
+  const diffHrs=Math.floor(diffMins/60);
+  if(diffHrs===1)return'1 hour ago';
+  if(diffHrs<24)return`${diffHrs} hours ago`;
+  const diffDays=Math.floor(diffHrs/24);
+  if(diffDays===1)return'1 day ago';
+  return `${diffDays} days ago`;
+}
 
 // Header buttons
-buttons.forEach(btn=>{btn.addEventListener('click',()=>{buttons.forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentFilter=btn.getAttribute('data-filter'); applyCurrentFilter(); });});
+buttons.forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    buttons.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter=btn.getAttribute('data-filter');
+    applyCurrentFilter();
+  });
+});
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
 
 // Subscribe friends
 function subscribeFriends(){
   db.collection('users').doc(currentUserID).collection('friends').where('status','==','accepted')
-    .onSnapshot(snap=>{ friendIds=new Set(); snap.forEach(doc=>friendIds.add(doc.id)); friendIds.add(currentUserID); fetchPosts(); fetchNotifications(); });
+    .onSnapshot(snap=>{
+      friendIds=new Set();
+      snap.forEach(doc=>friendIds.add(doc.id));
+      friendIds.add(currentUserID);
+      fetchPosts();
+      fetchNotifications();
+    });
 }
 subscribeFriends();
 
@@ -203,7 +228,7 @@ form.addEventListener('submit', async e=>{
   }catch(err){alert('Error posting: '+err.message);}
 });
 
-// --- NOTIFICATIONS & FRIEND REQUESTS ---
+// Notifications
 notifBtn.addEventListener('click',()=>{ notifPanel.style.display = notifPanel.style.display==='none'?'block':'none'; });
 
 async function fetchNotifications(){
@@ -234,6 +259,7 @@ async function fetchNotifications(){
     notifPanel.appendChild(div);
   });
 }
+fetchNotifications();
 </script>
 </body>
 </html>
