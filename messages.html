@@ -3,129 +3,246 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Direct Messages - The Blog Network</title>
+<title>The Blog Network - Direct Messages</title>
 <style>
-body { margin:0; font-family:Arial,sans-serif; background:#f0f4ff; color:#000080; }
-header { background:linear-gradient(90deg,#3399ff,#9966ff); padding:15px; display:flex; align-items:center; color:white; font-weight:bold; }
-header button { margin-right:10px; cursor:pointer; background:#ffcc00; border:2px solid #000080; border-radius:3px; padding:5px 10px; font-weight:bold; color:#000080; }
-.container { display:flex; height:calc(100vh-60px); }
-.sidebar { width:25%; background:#e6f0ff; overflow-y:auto; border-right:3px solid #3399ff; padding:10px; }
-.conversation { padding:8px; margin-bottom:4px; background:#fff; border:1px solid #99ccff; cursor:pointer; }
-.conversation:hover { background:#d9e6ff; }
-.chat { flex:1; display:flex; flex-direction:column; background:#ffffffcc; border-left:3px solid #9966ff; }
-.messages { flex:1; padding:15px; overflow-y:auto; }
-.message { margin:5px 0; padding:8px; border-radius:5px; max-width:70%; font-family:'Courier New', monospace; }
-.sent { background:#e6f0ff; align-self:flex-end; border:1px inset #99ccff; }
-.received { background:#fff9e6; align-self:flex-start; border:1px inset #ffcc00; }
-.input-box { display:flex; padding:10px; border-top:3px solid #3399ff; background:#fff; }
-.input-box input { flex:1; padding:8px; border:2px solid #9966ff; border-radius:4px; }
-.input-box button { margin-left:10px; padding:8px 14px; border:none; border-radius:4px; background:#9966ff; color:white; font-weight:bold; cursor:pointer; }
-.input-box button:hover { background:#7a3fcc; }
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f0f4ff url('https://www.transparenttextures.com/patterns/tileable-wood-print.png') repeat;
+    color: #000080;
+  }
+  header {
+    background: linear-gradient(90deg, #3399ff, #9966ff);
+    padding: 20px 30px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+  }
+  .container {
+    display: flex;
+    height: calc(100vh - 70px);
+  }
+  /* Sidebar for conversations */
+  .sidebar {
+    width: 25%;
+    background: #e6f0ff;
+    border-right: 3px solid #3399ff;
+    overflow-y: auto;
+  }
+  .sidebar h2 {
+    text-align: center;
+    margin: 12px 0;
+    font-size: 16px;
+    font-family: 'Courier New', monospace;
+  }
+  .conversation {
+    padding: 10px;
+    border-bottom: 2px inset #99ccff;
+    cursor: pointer;
+    background: #ffffffcc;
+    font-family: 'Courier New', monospace;
+  }
+  .conversation:hover {
+    background: #d9e6ff;
+  }
+  /* Chat area */
+  .chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #ffffffcc;
+    border-left: 3px solid #9966ff;
+  }
+  .messages {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+  }
+  .message {
+    margin: 8px 0;
+    padding: 10px;
+    border-radius: 6px;
+    max-width: 70%;
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+    box-shadow: 1px 1px 0 #99ccff;
+  }
+  .sent {
+    background: #e6f0ff;
+    border: 2px inset #99ccff;
+    align-self: flex-end;
+  }
+  .received {
+    background: #fff9e6;
+    border: 2px inset #ffcc00;
+    align-self: flex-start;
+  }
+  .input-box {
+    display: flex;
+    padding: 10px;
+    border-top: 3px solid #3399ff;
+    background: #fff;
+  }
+  .input-box input {
+    flex: 1;
+    padding: 8px;
+    border: 2px solid #9966ff;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  .input-box button {
+    margin-left: 10px;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 4px;
+    background: #9966ff;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  .input-box button:hover {
+    background: #7a3fcc;
+  }
+  footer {
+    text-align: center;
+    margin: 10px auto;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+    color: #333;
+  }
 </style>
 </head>
 <body>
-<header>
-  <button onclick="window.location.href='index.html'">Back</button>
-  Direct Messages
-</header>
+  <header>
+    THE BLOG NETWORK — Direct Messages
+  </header>
+  <div class="container">
+    <!-- Sidebar with list of conversations -->
+    <div class="sidebar">
+      <h2>Chats</h2>
+    </div>
 
-<div class="container">
-  <div class="sidebar">
-    <h3>Friends</h3>
-  </div>
-  <div class="chat">
-    <div class="messages"></div>
-    <div class="input-box">
-      <input type="text" placeholder="Type your message..." />
-      <button>Send</button>
+    <!-- Chat area -->
+    <div class="chat">
+      <div class="messages">
+        <div class="message received">Select a friend to start chatting!</div>
+      </div>
+      <div class="input-box">
+        <input type="text" placeholder="Type your message..." />
+        <button>Send</button>
+      </div>
     </div>
   </div>
-</div>
+  <footer><em>EST. 2025 CREATED BY friend_ultra</em></footer>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script>
-const SECRET_KEY = "MY_SECRET_KEY";
-let currentUserID = localStorage.getItem('userId') || ('user_'+Date.now()+'_'+Math.floor(Math.random()*1000));
-localStorage.setItem('userId', currentUserID);
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
+      authDomain:"the-blog-network.firebaseapp.com",
+      projectId:"the-blog-network",
+      storageBucket:"the-blog-network.appspot.com",
+      messagingSenderId:"857847462134",
+      appId:"1:857847462134:web:a22e9a6467a230632b94d7"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-const firebaseConfig = {
-  apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
-  authDomain:"the-blog-network.firebaseapp.com",
-  projectId:"the-blog-network",
-  storageBucket:"the-blog-network.appspot.com",
-  messagingSenderId:"857847462134",
-  appId:"1:857847462134:web:a22e9a6467a230632b94d7"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+    let currentUserID = localStorage.getItem('userId');
+    if(!currentUserID){
+      currentUserID = 'user_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+      localStorage.setItem('userId', currentUserID);
+    }
 
-const sidebar = document.querySelector('.sidebar');
-const messagesDiv = document.querySelector('.messages');
-const inputBox = document.querySelector('.input-box input');
-const sendBtn = document.querySelector('.input-box button');
+    const messagesDiv = document.querySelector('.messages');
+    const inputBox = document.querySelector('.input-box input');
+    const sendBtn = document.querySelector('.input-box button');
+    const conversationsDiv = document.querySelector('.sidebar');
 
-let currentFriendID = null;
-let friends = new Set();
+    let selectedFriendID = null;
+    let friendIds = new Set();
 
-// Load friends
-async function loadFriends(){
-  const snap = await db.collection('users').doc(currentUserID).collection('friends').get();
-  friends.clear();
-  sidebar.innerHTML = '<h3>Friends</h3>';
-  snap.forEach(doc=>{
-    friends.add(doc.id);
-    const div = document.createElement('div');
-    div.className = 'conversation';
-    div.textContent = doc.id;
-    div.addEventListener('click', ()=>openChat(doc.id));
-    sidebar.appendChild(div);
-  });
-  if(friends.size === 0){
-    const div = document.createElement('div');
-    div.textContent = 'No friends yet.';
-    sidebar.appendChild(div);
-  }
-}
-loadFriends();
-
-// Open chat
-function openChat(friendId){
-  currentFriendID = friendId;
-  messagesDiv.innerHTML = '';
-  const chatID = [currentUserID, friendId].sort().join('_'); // single collection per pair
-  db.collection('dms').doc(chatID).collection('messages')
-    .orderBy('timestamp')
-    .onSnapshot(snap=>{
-      messagesDiv.innerHTML='';
+    // Load friends into sidebar
+    async function loadFriends(){
+      const snap = await db.collection('users').doc(currentUserID).collection('friends').get();
+      friendIds.clear();
+      conversationsDiv.innerHTML = '<h2>Chats</h2>';
       snap.forEach(doc=>{
-        const m = doc.data();
+        friendIds.add(doc.id);
         const div = document.createElement('div');
-        div.className='message '+(m.senderID===currentUserID?'sent':'received');
-        div.textContent=m.content;
-        messagesDiv.appendChild(div);
+        div.className = 'conversation';
+        div.textContent = doc.data().username || 'Unknown';
+        div.dataset.userid = doc.id;
+        div.addEventListener('click', ()=>selectConversation(doc.id, div.textContent));
+        conversationsDiv.appendChild(div);
       });
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    });
-}
+      if(friendIds.size===0){
+        const p = document.createElement('p');
+        p.textContent = 'No friends yet.';
+        conversationsDiv.appendChild(p);
+      }
+    }
+    loadFriends();
 
-// Send message
-sendBtn.addEventListener('click', async ()=>{
-  const text = inputBox.value.trim();
-  if(!text) return;
-  if(!currentFriendID) return alert('Select a friend!');
-  if(!friends.has(currentFriendID)) return alert('Can only message friends!');
-  const chatID = [currentUserID, currentFriendID].sort().join('_');
-  try{
-    await db.collection('dms').doc(chatID).collection('messages').add({
-      senderID: currentUserID,
-      content: text,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      key: SECRET_KEY
+    // Select conversation
+    function selectConversation(friendID, friendName){
+      selectedFriendID = friendID;
+      messagesDiv.innerHTML = `<div class="message received">Chatting with ${friendName}</div>`;
+      loadMessages();
+    }
+
+    // Load messages with selected friend
+    function loadMessages(){
+      if(!selectedFriendID) return;
+      db.collection('users').doc(currentUserID)
+        .collection('dms').doc(selectedFriendID)
+        .collection('messages').orderBy('timestamp','asc')
+        .onSnapshot(snapshot=>{
+          messagesDiv.innerHTML = '';
+          snapshot.forEach(doc=>{
+            const msg = doc.data();
+            const div = document.createElement('div');
+            div.className = 'message ' + (msg.senderID===currentUserID ? 'sent' : 'received');
+            div.textContent = msg.content;
+            messagesDiv.appendChild(div);
+          });
+          messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        });
+    }
+
+    // Send message
+    sendBtn.addEventListener('click', async ()=>{
+      if(!selectedFriendID) return alert('Select a friend to message!');
+      const content = inputBox.value.trim();
+      if(!content) return;
+      if(!friendIds.has(selectedFriendID)) return alert('You can only message friends!');
+      
+      const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+      const messageData = { senderID: currentUserID, content, timestamp };
+
+      try{
+        // Write to current user's collection
+        await db.collection('users').doc(currentUserID)
+          .collection('dms').doc(selectedFriendID)
+          .collection('messages').add(messageData);
+
+        // Write to friend's collection
+        await db.collection('users').doc(selectedFriendID)
+          .collection('dms').doc(currentUserID)
+          .collection('messages').add(messageData);
+
+        inputBox.value = '';
+      }catch(err){
+        alert('Error sending message: ' + err.message);
+      }
     });
-    inputBox.value='';
-  }catch(err){ alert('Error: '+err.message); }
-});
-</script>
+  </script>
 </body>
 </html>
