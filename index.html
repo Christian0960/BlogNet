@@ -89,6 +89,8 @@ const profileBtn=document.getElementById('profile-btn');
 
 let currentFilter='friends';
 let friendIds=new Set();
+let lastSeenMap={}; // Track last seen timestamps
+
 if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
 function sanitizeText(text){return text;}
@@ -112,26 +114,30 @@ buttons.forEach(btn=>{
     buttons.forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     currentFilter=btn.getAttribute('data-filter');
-    applyCurrentFilter();
+    renderFeed();
   });
 });
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
 
 // Subscribe friends
 function subscribeFriends(){
-  db.collection('users').doc(currentUserID).collection('friends').where('status','==','accepted')
-    .onSnapshot(snap=>{
-      friendIds=new Set();
-      snap.forEach(doc=>friendIds.add(doc.id));
-      friendIds.add(currentUserID);
+  db.collection('users').doc(currentUserID).collection('friends').onSnapshot(snap=>{
+    friendIds=new Set();
+    snap.forEach(doc=>friendIds.add(doc.id));
+    friendIds.add(currentUserID);
+    // Load last seen timestamps
+    db.collection('users').doc(currentUserID).get().then(doc=>{
+      if(doc.exists && doc.data().lastSeen) lastSeenMap=doc.data().lastSeen;
       fetchPosts();
     });
+  });
 }
 subscribeFriends();
 
 // Fetch posts
 let cachedPosts=[];
 const userCache={};
+
 async function fetchMissingUsers(authorIds){
   const missing=authorIds.filter(id=>!userCache[id]);
   if(!missing.length) return;
@@ -161,6 +167,15 @@ function renderFeed(){
     article.className='post';
     article.dataset.type=p.type;
     article.dataset.author=authorId;
+    let show=true;
+    if(currentFilter==='public') show=(p.type==='public');
+    else if(currentFilter==='friends') show=friendIds.has(authorId);
+    else if(currentFilter==='unseen'){
+      const lastSeen=lastSeenMap[authorId]||0;
+      const postTime=post.timestamp?post.timestamp.toDate().getTime():0;
+      show=(post.type==='profile' && postTime>lastSeen);
+    }
+    article.style.display=show?'flex':'none';
     article.innerHTML=`
       <img src="${userData.avatarURL}" alt="avatar" class="profile-link" data-userid="${authorId}">
       <div class="post-content">
@@ -171,20 +186,6 @@ function renderFeed(){
     `;
     feed.appendChild(article);
     article.querySelectorAll('.profile-link').forEach(img=>img.addEventListener('click',()=>window.location.href=`profile.html?user=${encodeURIComponent(authorId)}`));
-  });
-  applyCurrentFilter();
-}
-
-function applyCurrentFilter(){
-  const posts=feed.querySelectorAll('.post');
-  posts.forEach(el=>{
-    const type=el.dataset.type;
-    const author=el.dataset.author;
-    let show=true;
-    if(currentFilter==='public') show=(type==='public');
-    else if(currentFilter==='friends') show=friendIds.has(author);
-    else if(currentFilter==='unseen') show=(type==='profile' && !friendIds.has(author));
-    el.style.display=show?'flex':'none';
   });
 }
 
@@ -202,9 +203,24 @@ form.addEventListener('submit', async e=>{
     const existing=userDoc.exists?userDoc.data():{};
     await userRef.set({username:newUsername, avatarURL:existing.avatarURL||'https://via.placeholder.com/40'},{merge:true});
     if(type==='profile'){
-      await db.collection('users').doc(currentUserID).collection('profilePosts').add({authorId:currentUserID, content:sanitizeText(content), timestamp:firebase.firestore.FieldValue.serverTimestamp(), type:'profile', key:SECRET_KEY});
+      await db.collection('users').doc(currentUserID).collection('profilePosts').add({
+        authorId:currentUserID,
+        content:sanitizeText(content),
+        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
+        type:'profile',
+        key:SECRET_KEY
+      });
+      // update last seen for self
+      lastSeenMap[currentUserID]=Date.now();
+      await userRef.set({lastSeen:lastSeenMap},{merge:true});
     } else {
-      await db.collection('publicPosts').add({authorId:currentUserID, content:sanitizeText(content), timestamp:firebase.firestore.FieldValue.serverTimestamp(), type:'public', key:SECRET_KEY});
+      await db.collection('publicPosts').add({
+        authorId:currentUserID,
+        content:sanitizeText(content),
+        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
+        type:'public',
+        key:SECRET_KEY
+      });
     }
     textarea.value='';
     fetchPosts();
