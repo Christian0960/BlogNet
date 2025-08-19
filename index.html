@@ -6,7 +6,7 @@
 <title>The Blog Network</title>
 <style>
 body { margin:0; font-family:Arial,sans-serif; background:#f0f4ff url('https://www.transparenttextures.com/patterns/tileable-wood-print.png') repeat; color:#000080; user-select:none; }
-header { background:linear-gradient(90deg,#3399ff,#9966ff); padding:20px 30px; box-shadow:0 3px 6px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+header { background:linear-gradient(90deg,#3399ff,#9966ff); padding:20px 30px; box-shadow:0 3px 6px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; position:relative; }
 .logo-container { display:flex; align-items:center; gap:15px; }
 .logo { font-size:36px; color:#fff; font-weight:bold; }
 .tagline { font-size:18px; color:#ffe066; font-style:italic; font-weight:bold; text-shadow:1px 1px 0 #000033; }
@@ -14,7 +14,6 @@ nav { display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wra
 button.filter-btn, #profile-btn, #dm-btn { background:#ffcc00; border:2px solid #000080; border-radius:3px; padding:8px 10px; font-weight:bold; font-size:14px; cursor:pointer; color:#000080; box-shadow:1px 1px 0 #333; transition:background 0.2s; position:relative; }
 button.filter-btn:hover, #profile-btn:hover, #dm-btn:hover { background:#ffff66; }
 button.filter-btn.active { background:#ffff99; border-color:#330066; box-shadow:2px 2px 4px #660099; }
-.dm-dot { width:10px; height:10px; background:red; border-radius:50%; position:absolute; top:2px; right:2px; display:none; }
 main { max-width:700px; margin:25px auto; padding:10px 20px; background:#ffffffcc; border:3px solid #3399ff; box-shadow:0 4px 10px rgba(0,0,0,0.2); border-radius:6px; min-height:300px; }
 form#post-form { max-width:700px; margin:0 auto 25px auto; background:#ffffffcc; padding:15px 20px; border:3px solid #9966ff; border-radius:6px; box-shadow:0 4px 8px rgba(153,102,255,0.5); display:flex; flex-direction:column; }
 input#username, textarea#post-content, select#post-type { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; margin-bottom:8px; }
@@ -27,6 +26,18 @@ button#submit-post:hover { background:#7a3fcc; }
 .post-content .author a { text-decoration:none; color:#000080; font-weight:bold; cursor:pointer; }
 .post-content .author a:hover { text-decoration:underline; }
 footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Courier New', monospace; color:#333; }
+
+/* Red dot for DM */
+#dm-dot {
+  display:none;
+  width:10px;
+  height:10px;
+  background:red;
+  border-radius:50%;
+  position:absolute;
+  top:2px;
+  right:2px;
+}
 </style>
 </head>
 <body>
@@ -44,9 +55,7 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
     </div>
     <div style="display:flex; gap:10px; align-items:center;">
       <button id="profile-btn" title="Profile">👤</button>
-      <button id="dm-btn" title="Direct Messages">✉️
-        <span class="dm-dot" id="dm-dot"></span>
-      </button>
+      <button id="dm-btn" title="Direct Messages">✉️<span id="dm-dot"></span></button>
     </div>
   </nav>
 </header>
@@ -82,6 +91,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// DOM Elements
 const buttons=document.querySelectorAll('.filter-btn');
 const feed=document.getElementById('feed');
 const form=document.getElementById('post-form');
@@ -94,7 +104,7 @@ const dmDot=document.getElementById('dm-dot');
 
 let currentFilter='friends';
 let friendIds=new Set();
-let lastSeenMap={};
+let lastSeenMap={}; // Track last seen timestamps
 
 if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
@@ -123,14 +133,12 @@ buttons.forEach(btn=>{
   });
 });
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
-dmBtn.addEventListener('click',()=>{
-  // mark all DMs as checked
-  db.collection('users').doc(currentUserID).set({lastCheckedDM: Date.now()},{merge:true});
-  dmDot.style.display='none';
-  window.location.href='messages.html';
+dmBtn.addEventListener('click',()=>{ 
+  markDMsAsSeen(); 
+  window.location.href='messages.html'; 
 });
 
-// Subscribe friends
+// Fetch friends
 function subscribeFriends(){
   db.collection('users').doc(currentUserID).collection('friends').onSnapshot(snap=>{
     friendIds=new Set();
@@ -138,36 +146,14 @@ function subscribeFriends(){
     friendIds.add(currentUserID);
     db.collection('users').doc(currentUserID).get().then(doc=>{
       if(doc.exists && doc.data().lastSeen) lastSeenMap=doc.data().lastSeen;
-      if(doc.exists && doc.data().lastCheckedDM) lastCheckedDM=doc.data().lastCheckedDM;
       fetchPosts();
-      checkDMs();
+      checkNewDMs(); // Check for new DMs
     });
   });
 }
-let lastCheckedDM=0;
 subscribeFriends();
 
-// Check for new DMs
-function checkDMs(){
-  db.collection('users').doc(currentUserID).collection('dms').onSnapshot(snap=>{
-    let hasNew=false;
-    snap.forEach(doc=>{
-      db.collection('users').doc(currentUserID).collection('dms').doc(doc.id).collection('messages')
-        .orderBy('timestamp','desc').limit(1).get().then(msgSnap=>{
-          if(!msgSnap.empty){
-            const msg=msgSnap.docs[0].data();
-            if(msg.senderID!==currentUserID && (!lastCheckedDM || msg.timestamp?.toMillis() > lastCheckedDM)){
-              hasNew=true;
-              dmDot.style.display='block';
-            }
-          }
-        });
-    });
-    if(!hasNew) dmDot.style.display='none';
-  });
-}
-
-// Fetch posts
+// Posts
 let cachedPosts=[];
 const userCache={};
 
@@ -258,6 +244,50 @@ form.addEventListener('submit', async e=>{
     fetchPosts();
   }catch(err){alert('Error posting: '+err.message);}
 });
+
+// ------------------- NEW DM RED DOT -------------------
+function checkNewDMs(){
+  db.collection('users').doc(currentUserID).collection('dms').onSnapshot(dmSnap=>{
+    let hasNew=false;
+    dmSnap.forEach(friendDoc=>{
+      const friendID = friendDoc.id;
+      db.collection('users').doc(currentUserID)
+        .collection('dms').doc(friendID)
+        .collection('messages')
+        .orderBy('timestamp','desc')
+        .limit(1)
+        .get()
+        .then(msgSnap=>{
+          if(!msgSnap.empty){
+            const msg = msgSnap.docs[0].data();
+            const lastChecked = parseInt(localStorage.getItem('lastCheckedDM_' + friendID)) || 0;
+            if(msg.senderID!==currentUserID && msg.timestamp?.toMillis() > lastChecked){
+              hasNew = true;
+              dmDot.style.display='block';
+            }
+          }
+        });
+    });
+    if(!hasNew) dmDot.style.display='none';
+  });
+}
+
+function markDMsAsSeen(){
+  db.collection('users').doc(currentUserID).collection('dms').get().then(snap=>{
+    snap.forEach(doc=>{
+      db.collection('users').doc(currentUserID).collection('dms').doc(doc.id)
+        .collection('messages').orderBy('timestamp','desc').limit(1)
+        .get().then(msgSnap=>{
+          if(!msgSnap.empty){
+            const ts = msgSnap.docs[0].data().timestamp?.toMillis() || Date.now();
+            localStorage.setItem('lastCheckedDM_' + doc.id, ts);
+          }
+        });
+    });
+  });
+  dmDot.style.display='none';
+}
+checkNewDMs();
 </script>
 </body>
 </html>
