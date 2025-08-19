@@ -82,7 +82,7 @@
   <div id="friends-container"></div>
   <div id="friend-actions"></div>
 
-  <!-- Friend requests section -->
+  <h2>Friend Requests</h2>
   <div id="friend-requests-container"></div>
 
   <div id="new-post-container">
@@ -252,7 +252,7 @@ async function loadFriends() {
 // Friend requests (for your own profile)
 async function loadFriendRequests() {
   if (!isOwnProfile) return;
-  friendRequestsContainer.innerHTML = '<h2>Friend Requests</h2>';
+  friendRequestsContainer.innerHTML = '';
 
   const snapshot = await db.collection('users')
     .doc(currentUserID)
@@ -262,7 +262,7 @@ async function loadFriendRequests() {
     .get();
 
   if (snapshot.empty) {
-    friendRequestsContainer.innerHTML += '<p>No friend requests.</p>';
+    friendRequestsContainer.innerHTML = '<p>No friend requests.</p>';
     return;
   }
 
@@ -282,8 +282,8 @@ async function loadFriendRequests() {
     acceptBtn.textContent = 'Accept';
     acceptBtn.onclick = async () => {
       try {
-        await db.collection('users').doc(currentUserID).collection('friends').doc(data.from).set({username: senderUsername, status:'accepted'});
-        await db.collection('users').doc(data.from).collection('friends').doc(currentUserID).set({username: usernameInput.value, status:'accepted'});
+        await db.collection('users').doc(currentUserID).collection('friends').doc(data.from).set({username: senderUsername});
+        await db.collection('users').doc(data.from).collection('friends').doc(currentUserID).set({username: usernameInput.value});
         await db.collection('users').doc(currentUserID).collection('notifications').doc(doc.id).delete();
         loadFriends();
         loadFriendRequests();
