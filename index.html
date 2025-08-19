@@ -11,17 +11,9 @@ header { background:linear-gradient(90deg,#3399ff,#9966ff); padding:20px 30px; b
 .logo { font-size:36px; color:#fff; font-weight:bold; }
 .tagline { font-size:18px; color:#ffe066; font-style:italic; font-weight:bold; text-shadow:1px 1px 0 #000033; }
 nav { display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wrap; }
-button.filter-btn, #profile-btn, #notif-btn { background:#ffcc00; border:2px solid #000080; border-radius:3px; padding:8px 10px; font-weight:bold; font-size:14px; cursor:pointer; color:#000080; box-shadow:1px 1px 0 #333; transition:background 0.2s; }
-button.filter-btn:hover, #profile-btn:hover, #notif-btn:hover { background:#ffff66; }
+button.filter-btn, #profile-btn { background:#ffcc00; border:2px solid #000080; border-radius:3px; padding:8px 10px; font-weight:bold; font-size:14px; cursor:pointer; color:#000080; box-shadow:1px 1px 0 #333; transition:background 0.2s; }
+button.filter-btn:hover, #profile-btn:hover { background:#ffff66; }
 button.filter-btn.active { background:#ffff99; border-color:#330066; box-shadow:2px 2px 4px #660099; }
-#notif-wrap { position:relative; }
-#notif-count { position:absolute; top:-6px; right:-6px; background:#e02424; color:#fff; border-radius:10px; padding:2px 6px; font-size:11px; display:none; }
-#notif-panel { position:absolute; right:0; top:42px; width:280px; max-height:320px; overflow:auto; background:#ffffff; border:2px solid #9966ff; box-shadow:0 6px 14px rgba(0,0,0,0.25); border-radius:6px; display:none; z-index:10; }
-.notif-item { padding:10px; border-bottom:1px solid #eee; font-size:13px; display:flex; justify-content:space-between; align-items:center; }
-.notif-item.unread { background:#f5f0ff; font-weight:bold; }
-.notif-empty { padding:14px; text-align:center; color:#555; font-size:13px; }
-.notif-item button { margin-left:5px; background:#3399ff; border:none; color:white; padding:2px 6px; border-radius:3px; cursor:pointer; font-size:12px; }
-.notif-item button:hover { background:#2277cc; }
 main { max-width:700px; margin:25px auto; padding:10px 20px; background:#ffffffcc; border:3px solid #3399ff; box-shadow:0 4px 10px rgba(0,0,0,0.2); border-radius:6px; min-height:300px; }
 form#post-form { max-width:700px; margin:0 auto 25px auto; background:#ffffffcc; padding:15px 20px; border:3px solid #9966ff; border-radius:6px; box-shadow:0 4px 8px rgba(153,102,255,0.5); display:flex; flex-direction:column; }
 input#username, textarea#post-content, select#post-type { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; margin-bottom:8px; }
@@ -51,11 +43,6 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
     </div>
     <div style="display:flex; gap:10px; align-items:center;">
       <button id="profile-btn" title="Profile">👤</button>
-      <div id="notif-wrap">
-        <button id="notif-btn" title="Notifications">🔔</button>
-        <span id="notif-count">0</span>
-        <div id="notif-panel"></div>
-      </div>
     </div>
   </nav>
 </header>
@@ -98,9 +85,6 @@ const form=document.getElementById('post-form');
 const textarea=document.getElementById('post-content');
 const usernameInput=document.getElementById('username');
 const postTypeSelect=document.getElementById('post-type');
-const notifBtn=document.getElementById('notif-btn');
-const notifCount=document.getElementById('notif-count');
-const notifPanel=document.getElementById('notif-panel');
 const profileBtn=document.getElementById('profile-btn');
 
 let currentFilter='friends';
@@ -141,7 +125,6 @@ function subscribeFriends(){
       snap.forEach(doc=>friendIds.add(doc.id));
       friendIds.add(currentUserID);
       fetchPosts();
-      fetchNotifications();
     });
 }
 subscribeFriends();
@@ -227,39 +210,6 @@ form.addEventListener('submit', async e=>{
     fetchPosts();
   }catch(err){alert('Error posting: '+err.message);}
 });
-
-// Notifications
-notifBtn.addEventListener('click',()=>{ notifPanel.style.display = notifPanel.style.display==='none'?'block':'none'; });
-
-async function fetchNotifications(){
-  const notifSnap = await db.collection('users').doc(currentUserID).collection('friendRequests').orderBy('timestamp','desc').get();
-  notifPanel.innerHTML='';
-  if(notifSnap.empty){ notifPanel.innerHTML='<div class="notif-empty">No notifications</div>'; notifCount.style.display='none'; return; }
-  notifCount.style.display='inline';
-  notifCount.textContent = notifSnap.size;
-  notifSnap.forEach(doc=>{
-    const data=doc.data();
-    const div=document.createElement('div');
-    div.className='notif-item unread';
-    div.innerHTML=`<span>${data.fromUsername || 'Unknown'} sent a friend request</span>`;
-    const acceptBtn=document.createElement('button'); acceptBtn.textContent='Accept';
-    const rejectBtn=document.createElement('button'); rejectBtn.textContent='Reject';
-    acceptBtn.onclick = async ()=>{
-      await db.collection('users').doc(currentUserID).collection('friends').doc(doc.id).set({status:'accepted'});
-      await db.collection('users').doc(doc.id).collection('friends').doc(currentUserID).set({status:'accepted'});
-      await db.collection('users').doc(currentUserID).collection('friendRequests').doc(doc.id).delete();
-      fetchNotifications();
-      subscribeFriends();
-    };
-    rejectBtn.onclick = async ()=>{
-      await db.collection('users').doc(currentUserID).collection('friendRequests').doc(doc.id).delete();
-      fetchNotifications();
-    };
-    div.appendChild(acceptBtn); div.appendChild(rejectBtn);
-    notifPanel.appendChild(div);
-  });
-}
-fetchNotifications();
 </script>
 </body>
 </html>
