@@ -99,303 +99,151 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 // Firebase init
-const firebaseConfig = {
-  apiKey: "AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
-  authDomain: "the-blog-network.firebaseapp.com",
-  projectId: "the-blog-network",
-  storageBucket: "the-blog-network.appspot.com",
-  messagingSenderId: "857847462134",
-  appId: "1:857847462134:web:a22e9a6467a230632b94d7"
-};
+const firebaseConfig = { apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0", authDomain:"the-blog-network.firebaseapp.com", projectId:"the-blog-network", storageBucket:"the-blog-network.appspot.com", messagingSenderId:"857847462134", appId:"1:857847462134:web:a22e9a6467a230632b94d7" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 let currentUserID = localStorage.getItem('userId');
-if (!currentUserID) {
-  currentUserID = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  localStorage.setItem('userId', currentUserID);
-}
-
+if(!currentUserID) { currentUserID='user_'+Date.now()+'_'+Math.floor(Math.random()*1000); localStorage.setItem('userId',currentUserID);}
 const urlParams = new URLSearchParams(window.location.search);
-const profileUserID = urlParams.get('user') || currentUserID;
-const isOwnProfile = profileUserID === currentUserID;
+const profileUserID = urlParams.get('user')||currentUserID;
+const isOwnProfile = profileUserID===currentUserID;
 
 // Elements
-const usernameInput = document.getElementById('username-input');
-const bioInput = document.getElementById('bio-input');
-const movieInput = document.getElementById('movie-input');
-const songInput = document.getElementById('song-input');
-const birthdayInput = document.getElementById('birthday-input');
-const avatarInput = document.getElementById('avatar-input');
-const wallpaperSelect = document.getElementById('wallpaper-select');
-const saveBtn = document.getElementById('save-btn');
-const avatarPreview = document.getElementById('avatar-preview');
-const main = document.getElementById('profile-main');
-const blogPostsContainer = document.getElementById('blog-posts-container');
-const newPostInput = document.getElementById('new-post-input');
-const submitPostBtn = document.getElementById('submit-post-btn');
-const friendsContainer = document.getElementById('friends-container');
-const friendActions = document.getElementById('friend-actions');
-const newPostContainer = document.getElementById('new-post-container');
-const friendRequestsContainer = document.getElementById('friend-requests-container');
+const usernameInput=document.getElementById('username-input');
+const bioInput=document.getElementById('bio-input');
+const movieInput=document.getElementById('movie-input');
+const songInput=document.getElementById('song-input');
+const birthdayInput=document.getElementById('birthday-input');
+const avatarInput=document.getElementById('avatar-input');
+const wallpaperSelect=document.getElementById('wallpaper-select');
+const saveBtn=document.getElementById('save-btn');
+const avatarPreview=document.getElementById('avatar-preview');
+const main=document.getElementById('profile-main');
+const blogPostsContainer=document.getElementById('blog-posts-container');
+const newPostInput=document.getElementById('new-post-input');
+const submitPostBtn=document.getElementById('submit-post-btn');
+const friendsContainer=document.getElementById('friends-container');
+const friendActions=document.getElementById('friend-actions');
+const newPostContainer=document.getElementById('new-post-container');
+const friendRequestsContainer=document.getElementById('friend-requests-container');
 
 // Timestamp formatter
-function formatTimestamp(date) {
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  if(diffMins<1) return 'just now';
-  if(diffMins===1) return '1 minute ago';
-  if(diffMins<60) return `${diffMins} minutes ago`;
-  const diffHrs = Math.floor(diffMins/60);
-  if(diffHrs===1) return '1 hour ago';
-  if(diffHrs<24) return `${diffHrs} hours ago`;
-  const diffDays = Math.floor(diffHrs/24);
-  if(diffDays===1) return '1 day ago';
-  return `${diffDays} days ago`;
-}
+function formatTimestamp(date){const now=new Date();const diffMs=now-date;const diffMins=Math.floor(diffMs/60000);if(diffMins<1)return'just now';if(diffMins===1)return'1 minute ago';if(diffMins<60)return`${diffMins} minutes ago`;const diffHrs=Math.floor(diffMins/60);if(diffHrs===1)return'1 hour ago';if(diffHrs<24)return`${diffHrs} hours ago`;const diffDays=Math.floor(diffHrs/24);if(diffDays===1)return'1 day ago';return`${diffDays} days ago`;}
 
 // Load profile
-async function loadProfile() {
-  try {
-    const doc = await db.collection('users').doc(profileUserID).get();
-    const data = doc.exists ? doc.data() : {};
-    usernameInput.value = data.username || '';
-    bioInput.value = data.bio || '';
-    movieInput.value = data.favoriteMovie || '';
-    songInput.value = data.favoriteSong || '';
-    birthdayInput.value = data.birthday || '';
-    avatarInput.value = data.avatarURL || '';
-    wallpaperSelect.value = data.wallpaper || '#f0f4ff';
-    avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
-    main.style.background = wallpaperSelect.value;
+async function loadProfile(){
+  try{
+    const doc=await db.collection('users').doc(profileUserID).get();
+    const data=doc.exists?doc.data():{};
+    usernameInput.value=data.username||'';
+    bioInput.value=data.bio||'';
+    movieInput.value=data.favoriteMovie||'';
+    songInput.value=data.favoriteSong||'';
+    birthdayInput.value=data.birthday||'';
+    avatarInput.value=data.avatarURL||'';
+    wallpaperSelect.value=data.wallpaper||'#f0f4ff';
+    avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
+    main.style.background=wallpaperSelect.value;
 
-    if (!isOwnProfile) {
-      [usernameInput, bioInput, movieInput, songInput, birthdayInput, avatarInput, wallpaperSelect, saveBtn, newPostInput, submitPostBtn]
-        .forEach(el => el.disabled = true);
-      saveBtn.style.display = 'none';
-      submitPostBtn.style.display = 'none';
-      newPostContainer.style.display = 'none';
+    if(!isOwnProfile){
+      [usernameInput,bioInput,movieInput,songInput,birthdayInput,avatarInput,wallpaperSelect,saveBtn,newPostInput,submitPostBtn].forEach(el=>el.disabled=true);
+      saveBtn.style.display='none'; submitPostBtn.style.display='none'; newPostContainer.style.display='none';
     }
 
     loadFriends();
     setupFriendActions();
     loadFriendRequests();
     loadBlogPosts();
-  } catch(err){
-    console.error('Error loading profile:', err);
-  }
+  }catch(err){console.error('Error loading profile:',err);}
 }
 
 // Save profile changes
-saveBtn.addEventListener('click', async () => {
-  const username = usernameInput.value.trim();
-  if (!username) return alert('Username cannot be empty.');
-
-  try {
-    const usernameCheck = await db.collection('users')
-      .where('username', '==', username)
-      .get();
-    const isTaken = !usernameCheck.empty && !(usernameCheck.docs.length === 1 && usernameCheck.docs[0].id === currentUserID);
-    if (isTaken) return alert('Username already taken! Choose another.');
-
-    const profileData = {
-      username,
-      bio: bioInput.value.trim(),
-      favoriteMovie: movieInput.value.trim(),
-      favoriteSong: songInput.value.trim(),
-      birthday: birthdayInput.value,
-      avatarURL: avatarInput.value.trim(),
-      wallpaper: wallpaperSelect.value
-    };
-
-    Object.keys(profileData).forEach(key => localStorage.setItem(key, profileData[key]));
-    await db.collection('users').doc(currentUserID).set(profileData, { merge: true });
-
+saveBtn.addEventListener('click',async()=>{
+  const username=usernameInput.value.trim();
+  if(!username) return alert('Username cannot be empty.');
+  try{
+    const usernameCheck=await db.collection('users').where('username','==',username).get();
+    const isTaken=!usernameCheck.empty&&!(usernameCheck.docs.length===1&&usernameCheck.docs[0].id===currentUserID);
+    if(isTaken) return alert('Username already taken! Choose another.');
+    const profileData={username,bio:bioInput.value.trim(),favoriteMovie:movieInput.value.trim(),favoriteSong:songInput.value.trim(),birthday:birthdayInput.value,avatarURL:avatarInput.value.trim(),wallpaper:wallpaperSelect.value};
+    Object.keys(profileData).forEach(key=>localStorage.setItem(key,profileData[key]));
+    await db.collection('users').doc(currentUserID).set(profileData,{merge:true});
     alert('Profile updated!');
-    avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150';
-    main.style.background = wallpaperSelect.value;
-  } catch(err) {
-    alert('Error saving profile: ' + err.message);
-  }
+    avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
+    main.style.background=wallpaperSelect.value;
+  }catch(err){alert('Error saving profile: '+err.message);}
 });
 
 // Avatar & wallpaper preview
-avatarInput.addEventListener('input', () => avatarPreview.src = avatarInput.value || 'https://via.placeholder.com/150');
-wallpaperSelect.addEventListener('change', () => main.style.background = wallpaperSelect.value);
+avatarInput.addEventListener('input',()=>avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150');
+wallpaperSelect.addEventListener('change',()=>main.style.background=wallpaperSelect.value);
 
 // Load friends
-async function loadFriends() {
-  friendsContainer.innerHTML = '';
-  const snapshot = await db.collection('users')
-    .doc(profileUserID)
-    .collection('friends')
-    .get();
-
-  if (snapshot.empty) {
-    friendsContainer.innerHTML = '<p>No friends yet.</p>';
-    return;
-  }
-
-  snapshot.forEach(doc => {
-    const friend = doc.data();
-    const p = document.createElement('p');
-    if(friend.username){
-      p.innerHTML = `<a href="profile.html?user=${encodeURIComponent(doc.id)}">${friend.username}</a>`;
-    } else {
-      p.textContent = 'Unknown';
-    }
-    friendsContainer.appendChild(p);
-  });
+async function loadFriends(){
+  friendsContainer.innerHTML='';
+  const snapshot=await db.collection('users').doc(profileUserID).collection('friends').get();
+  if(snapshot.empty){ friendsContainer.innerHTML='<p>No friends yet.</p>'; return;}
+  snapshot.forEach(doc=>{const friend=doc.data();const p=document.createElement('p');p.innerHTML=friend.username?`<a href="profile.html?user=${encodeURIComponent(doc.id)}">${friend.username}</a>`:'Unknown';friendsContainer.appendChild(p);});
 }
 
-// Friend requests (for your own profile)
-async function loadFriendRequests() {
-  if (!isOwnProfile) return;
-  friendRequestsContainer.innerHTML = '';
-
-  const snapshot = await db.collection('users')
-    .doc(currentUserID)
-    .collection('notifications')
-    .where('type', '==', 'friend_request')
-    .orderBy('timestamp', 'desc')
-    .get();
-
-  if (snapshot.empty) {
-    friendRequestsContainer.innerHTML = '<p>No friend requests.</p>';
-    return;
-  }
-
-  snapshot.forEach(async doc => {
-    const data = doc.data();
-    let senderUsername = data.from;
-    try {
-      const senderDoc = await db.collection('users').doc(data.from).get();
-      if(senderDoc.exists && senderDoc.data().username) senderUsername = senderDoc.data().username;
-    } catch(e) { console.error('Error fetching sender:', e); }
-
-    const div = document.createElement('div');
-    div.className = 'notif-item';
-    div.innerHTML = `<span>📩 ${senderUsername} sent a friend request</span>`;
-
-    const acceptBtn = document.createElement('button');
-    acceptBtn.textContent = 'Accept';
-    acceptBtn.onclick = async () => {
-      try {
-        await db.collection('users').doc(currentUserID).collection('friends').doc(data.from).set({username: senderUsername});
-        await db.collection('users').doc(data.from).collection('friends').doc(currentUserID).set({username: usernameInput.value});
-        await db.collection('users').doc(currentUserID).collection('notifications').doc(doc.id).delete();
-        loadFriends();
-        loadFriendRequests();
-      } catch(err){ alert('Error accepting: ' + err.message); }
+// Friend requests (your own profile)
+async function loadFriendRequests(){
+  if(!isOwnProfile) return;
+  friendRequestsContainer.innerHTML='';
+  const snapshot=await db.collection('users').doc(currentUserID).collection('friendRequests').get();
+  if(snapshot.empty){ friendRequestsContainer.innerHTML='<p>No friend requests.</p>'; return;}
+  snapshot.forEach(async doc=>{
+    const data=doc.data();
+    const senderDoc=await db.collection('users').doc(doc.id).get();
+    const senderUsername=senderDoc.exists&&senderDoc.data().username?senderDoc.data().username:'Unknown';
+    const div=document.createElement('div');
+    div.className='notif-item';
+    div.innerHTML=`<span>📩 ${senderUsername} sent a friend request</span>`;
+    const acceptBtn=document.createElement('button'); acceptBtn.textContent='Accept';
+    acceptBtn.onclick=async()=>{
+      try{
+        await db.collection('users').doc(currentUserID).collection('friends').doc(doc.id).set({username:senderUsername});
+        await db.collection('users').doc(doc.id).collection('friends').doc(currentUserID).set({username:usernameInput.value});
+        await db.collection('users').doc(currentUserID).collection('friendRequests').doc(doc.id).delete();
+        loadFriends(); loadFriendRequests();
+      }catch(err){alert('Error accepting: '+err.message);}
     };
-
-    const rejectBtn = document.createElement('button');
-    rejectBtn.textContent = 'Reject';
-    rejectBtn.onclick = async () => {
-      try { await db.collection('users').doc(currentUserID).collection('notifications').doc(doc.id).delete(); loadFriendRequests(); }
-      catch(err){ alert('Error rejecting: ' + err.message); }
-    };
-
-    div.appendChild(acceptBtn);
-    div.appendChild(rejectBtn);
-    friendRequestsContainer.appendChild(div);
+    const rejectBtn=document.createElement('button'); rejectBtn.textContent='Reject';
+    rejectBtn.onclick=async()=>{try{await db.collection('users').doc(currentUserID).collection('friendRequests').doc(doc.id).delete();loadFriendRequests();}catch(err){alert('Error rejecting: '+err.message);}};
+    div.appendChild(acceptBtn); div.appendChild(rejectBtn); friendRequestsContainer.appendChild(div);
   });
 }
 
-// Setup friend actions
-async function setupFriendActions() {
-  friendActions.innerHTML = '';
-  if (isOwnProfile) return;
-
-  const friendDoc = await db.collection('users')
-    .doc(currentUserID)
-    .collection('friends')
-    .doc(profileUserID)
-    .get();
-
-  if (friendDoc.exists) {
-    friendActions.innerHTML = '<p>✅ You are friends</p>';
-    return;
-  }
-
-  const pending = await db.collection('users')
-    .doc(profileUserID)
-    .collection('notifications')
-    .where('from', '==', currentUserID)
-    .where('type', '==', 'friend_request')
-    .get();
-
-  if (!pending.empty) {
-    friendActions.innerHTML = '<p>📩 Friend request sent</p>';
-    return;
-  }
-
-  const btn = document.createElement('button');
-  btn.textContent = '➕ Add Friend';
-  btn.addEventListener('click', async () => {
-    try {
-      await db.collection('users')
-        .doc(profileUserID)
-        .collection('notifications')
-        .add({
-          type: 'friend_request',
-          from: currentUserID,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      alert('Friend request sent!');
-      setupFriendActions();
-    } catch(err) {
-      alert('Error: ' + err.message);
-    }
-  });
-  friendActions.appendChild(btn);
+// Setup friend actions (on other profiles)
+async function setupFriendActions(){
+  friendActions.innerHTML=''; if(isOwnProfile) return;
+  const friendDoc=await db.collection('users').doc(currentUserID).collection('friends').doc(profileUserID).get();
+  if(friendDoc.exists){ friendActions.innerHTML='<p>✅ You are friends</p>'; return;}
+  const pending=await db.collection('users').doc(profileUserID).collection('friendRequests').doc(currentUserID).get();
+  if(pending.exists){ friendActions.innerHTML='<p>📩 Friend request sent</p>'; return;}
+  const btn=document.createElement('button'); btn.textContent='➕ Add Friend';
+  btn.addEventListener('click',async()=>{
+    try{await db.collection('users').doc(profileUserID).collection('friendRequests').doc(currentUserID).set({});alert('Friend request sent!'); setupFriendActions();}catch(err){alert('Error: '+err.message);}
+  }); friendActions.appendChild(btn);
 }
 
-// Load profile blog posts
-async function loadBlogPosts() {
-  blogPostsContainer.innerHTML = '';
-  const snapshot = await db.collection('users')
-    .doc(profileUserID)
-    .collection('profilePosts')
-    .orderBy('timestamp', 'desc')
-    .get();
-
-  snapshot.forEach(doc => {
-    const post = doc.data();
-    const postDiv = document.createElement('div');
-    postDiv.className = 'blog-post';
-    postDiv.innerHTML = `<div class="timestamp">${post.timestamp ? formatTimestamp(post.timestamp.toDate()) : ''}</div>
-                         <div class="content">${post.content}</div>`;
-    blogPostsContainer.appendChild(postDiv);
-  });
+// Load blog posts
+async function loadBlogPosts(){
+  blogPostsContainer.innerHTML='';
+  const snapshot=await db.collection('users').doc(profileUserID).collection('profilePosts').orderBy('timestamp','desc').get();
+  snapshot.forEach(doc=>{const post=doc.data();const postDiv=document.createElement('div');postDiv.className='blog-post';postDiv.innerHTML=`<div class="timestamp">${post.timestamp?formatTimestamp(post.timestamp.toDate()):''}</div><div class="content">${post.content}</div>`;blogPostsContainer.appendChild(postDiv);});
 }
 
 // Submit new blog post
-submitPostBtn.addEventListener('click', async () => {
-  const content = newPostInput.value.trim();
-  if (!content) return alert('Post cannot be empty.');
-
-  const postData = {
-    content,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  };
-
-  try {
-    await db.collection('users')
-      .doc(currentUserID)
-      .collection('profilePosts')
-      .add(postData);
-
-    newPostInput.value = '';
-    loadBlogPosts();
-  } catch(err) {
-    alert('Error posting blog: ' + err.message);
-  }
+submitPostBtn.addEventListener('click',async()=>{
+  const content=newPostInput.value.trim(); if(!content) return alert('Post cannot be empty.');
+  const postData={content,timestamp:firebase.firestore.FieldValue.serverTimestamp()};
+  try{await db.collection('users').doc(currentUserID).collection('profilePosts').add(postData); newPostInput.value=''; loadBlogPosts();}catch(err){alert('Error posting blog: '+err.message);}
 });
 
 // Back button
-document.getElementById('back-btn').addEventListener('click', () => window.location.href = 'index.html');
+document.getElementById('back-btn').addEventListener('click',()=>window.location.href='index.html');
 
 // Initial load
 loadProfile();
