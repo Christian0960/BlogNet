@@ -11,8 +11,8 @@ header { background:linear-gradient(90deg,#3399ff,#9966ff); padding:20px 30px; b
 .logo { font-size:36px; color:#fff; font-weight:bold; }
 .tagline { font-size:18px; color:#ffe066; font-style:italic; font-weight:bold; text-shadow:1px 1px 0 #000033; }
 nav { display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wrap; }
-button.filter-btn, #profile-btn { background:#ffcc00; border:2px solid #000080; border-radius:3px; padding:8px 10px; font-weight:bold; font-size:14px; cursor:pointer; color:#000080; box-shadow:1px 1px 0 #333; transition:background 0.2s; }
-button.filter-btn:hover, #profile-btn:hover { background:#ffff66; }
+button.filter-btn, #profile-btn, #dm-btn { background:#ffcc00; border:2px solid #000080; border-radius:3px; padding:8px 10px; font-weight:bold; font-size:14px; cursor:pointer; color:#000080; box-shadow:1px 1px 0 #333; transition:background 0.2s; }
+button.filter-btn:hover, #profile-btn:hover, #dm-btn:hover { background:#ffff66; }
 button.filter-btn.active { background:#ffff99; border-color:#330066; box-shadow:2px 2px 4px #660099; }
 main { max-width:700px; margin:25px auto; padding:10px 20px; background:#ffffffcc; border:3px solid #3399ff; box-shadow:0 4px 10px rgba(0,0,0,0.2); border-radius:6px; min-height:300px; }
 form#post-form { max-width:700px; margin:0 auto 25px auto; background:#ffffffcc; padding:15px 20px; border:3px solid #9966ff; border-radius:6px; box-shadow:0 4px 8px rgba(153,102,255,0.5); display:flex; flex-direction:column; }
@@ -43,6 +43,7 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
     </div>
     <div style="display:flex; gap:10px; align-items:center;">
       <button id="profile-btn" title="Profile">👤</button>
+      <button id="dm-btn" title="Direct Messages">✉️</button>
     </div>
   </nav>
 </header>
@@ -86,6 +87,7 @@ const textarea=document.getElementById('post-content');
 const usernameInput=document.getElementById('username');
 const postTypeSelect=document.getElementById('post-type');
 const profileBtn=document.getElementById('profile-btn');
+const dmBtn=document.getElementById('dm-btn');
 
 let currentFilter='friends';
 let friendIds=new Set();
@@ -118,6 +120,7 @@ buttons.forEach(btn=>{
   });
 });
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
+dmBtn.addEventListener('click',()=>{ window.location.href='messages.html'; });
 
 // Subscribe friends
 function subscribeFriends(){
@@ -210,7 +213,6 @@ form.addEventListener('submit', async e=>{
         type:'profile',
         key:SECRET_KEY
       });
-      // update last seen for self
       lastSeenMap[currentUserID]=Date.now();
       await userRef.set({lastSeen:lastSeenMap},{merge:true});
     } else {
