@@ -18,7 +18,7 @@
   label { display:block; margin:10px 0 5px; font-weight:bold; }
   input[type="text"], input[type="url"], input[type="date"], textarea, select { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; }
   textarea { resize:vertical; min-height:60px; }
-  #friends-container p, #blog-posts-container p { margin:4px 0; }
+  #friends-container p, #blog-posts-container p, #friend-requests-container p { margin:4px 0; }
   #avatar-username-container { display:flex; align-items:center; gap:15px; margin-bottom:15px; }
   #profile-avatar img { width:150px; height:150px; border-radius:50%; object-fit:cover; background:#ccc; }
   #username-input { flex:1; font-size:20px; }
@@ -79,6 +79,9 @@
   <div id="friends-container"></div>
   <div id="friend-actions"></div>
 
+  <!-- Friend requests section -->
+  <div id="friend-requests-container"></div>
+
   <div id="new-post-container">
     <h2>New Blog Post</h2>
     <textarea id="new-post-input" placeholder="Write your post here..."></textarea>
@@ -104,14 +107,12 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Stable unique userId
 let currentUserID = localStorage.getItem('userId');
 if (!currentUserID) {
   currentUserID = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
   localStorage.setItem('userId', currentUserID);
 }
 
-// Check URL for ?user=OTHER_USER_ID
 const urlParams = new URLSearchParams(window.location.search);
 const profileUserID = urlParams.get('user') || currentUserID;
 const isOwnProfile = profileUserID === currentUserID;
@@ -133,8 +134,9 @@ const submitPostBtn = document.getElementById('submit-post-btn');
 const friendsContainer = document.getElementById('friends-container');
 const friendActions = document.getElementById('friend-actions');
 const newPostContainer = document.getElementById('new-post-container');
+const friendRequestsContainer = document.getElementById('friend-requests-container');
 
-// Friendly timestamp formatter
+// Timestamp formatter
 function formatTimestamp(date) {
   const now = new Date();
   const diffMs = now - date;
@@ -175,6 +177,7 @@ async function loadProfile() {
 
     loadFriends();
     setupFriendActions();
+    loadFriendRequests();
     loadBlogPosts();
   } catch(err){
     console.error('Error loading profile:', err);
@@ -240,6 +243,30 @@ async function loadFriends() {
       p.textContent = 'Unknown';
     }
     friendsContainer.appendChild(p);
+  });
+}
+
+// Friend requests (for your own profile)
+async function loadFriendRequests() {
+  if (!isOwnProfile) return;
+  friendRequestsContainer.innerHTML = '<h2>Friend Requests</h2>';
+
+  const snapshot = await db.collection('users')
+    .doc(currentUserID)
+    .collection('notifications')
+    .where('type', '==', 'friend_request')
+    .get();
+
+  if (snapshot.empty) {
+    friendRequestsContainer.innerHTML += '<p>No friend requests.</p>';
+    return;
+  }
+
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    const p = document.createElement('p');
+    p.textContent = `📩 Friend request from ${data.from}`;
+    friendRequestsContainer.appendChild(p);
   });
 }
 
