@@ -26,6 +26,9 @@
   .blog-post .timestamp { font-size:11px; color:#333; margin-bottom:5px; }
   #new-post-container { margin-bottom:20px; }
   #new-post-input { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; resize:vertical; min-height:60px; margin-bottom:8px; }
+  .notif-item { padding:6px 10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-size:13px; }
+  .notif-item button { margin-left:5px; background:#3399ff; border:none; color:white; padding:2px 6px; border-radius:3px; cursor:pointer; font-size:12px; }
+  .notif-item button:hover { background:#2277cc; }
 </style>
 </head>
 <body>
@@ -255,6 +258,7 @@ async function loadFriendRequests() {
     .doc(currentUserID)
     .collection('notifications')
     .where('type', '==', 'friend_request')
+    .orderBy('timestamp', 'desc')
     .get();
 
   if (snapshot.empty) {
@@ -262,11 +266,40 @@ async function loadFriendRequests() {
     return;
   }
 
-  snapshot.forEach(doc => {
+  snapshot.forEach(async doc => {
     const data = doc.data();
-    const p = document.createElement('p');
-    p.textContent = `📩 Friend request from ${data.from}`;
-    friendRequestsContainer.appendChild(p);
+    let senderUsername = data.from;
+    try {
+      const senderDoc = await db.collection('users').doc(data.from).get();
+      if(senderDoc.exists && senderDoc.data().username) senderUsername = senderDoc.data().username;
+    } catch(e) { console.error('Error fetching sender:', e); }
+
+    const div = document.createElement('div');
+    div.className = 'notif-item';
+    div.innerHTML = `<span>📩 ${senderUsername} sent a friend request</span>`;
+
+    const acceptBtn = document.createElement('button');
+    acceptBtn.textContent = 'Accept';
+    acceptBtn.onclick = async () => {
+      try {
+        await db.collection('users').doc(currentUserID).collection('friends').doc(data.from).set({username: senderUsername, status:'accepted'});
+        await db.collection('users').doc(data.from).collection('friends').doc(currentUserID).set({username: usernameInput.value, status:'accepted'});
+        await db.collection('users').doc(currentUserID).collection('notifications').doc(doc.id).delete();
+        loadFriends();
+        loadFriendRequests();
+      } catch(err){ alert('Error accepting: ' + err.message); }
+    };
+
+    const rejectBtn = document.createElement('button');
+    rejectBtn.textContent = 'Reject';
+    rejectBtn.onclick = async () => {
+      try { await db.collection('users').doc(currentUserID).collection('notifications').doc(doc.id).delete(); loadFriendRequests(); }
+      catch(err){ alert('Error rejecting: ' + err.message); }
+    };
+
+    div.appendChild(acceptBtn);
+    div.appendChild(rejectBtn);
+    friendRequestsContainer.appendChild(div);
   });
 }
 
