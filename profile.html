@@ -103,7 +103,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
-// Firebase init
 const firebaseConfig = { 
   apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0", 
   authDomain:"the-blog-network.firebaseapp.com", 
@@ -114,7 +113,6 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-
 const SECRET_KEY = "MY_SECRET_KEY";
 
 let currentUserID = localStorage.getItem('userId');
@@ -220,12 +218,26 @@ saveBtn.addEventListener('click',async()=>{
     const usernameCheck=await db.collection('users').where('username','==',username).get();
     const isTaken=!usernameCheck.empty&&!(usernameCheck.docs.length===1&&usernameCheck.docs[0].id===currentUserID);
     if(isTaken) return alert('Username already taken!');
-    const profileData={username,bio:bioInput.value.trim(),favoriteMovie:movieInput.value.trim(),favoriteSong:songInput.value.trim(),birthday:birthdayInput.value,avatarURL:avatarInput.value.trim(),wallpaper:wallpaperSelect.value};
+
+    const profileData={
+      username,
+      bio:bioInput.value.trim(),
+      favoriteMovie:movieInput.value.trim(),
+      favoriteSong:songInput.value.trim(),
+      birthday:birthdayInput.value,
+      avatarURL:avatarInput.value.trim(),
+      wallpaper:wallpaperSelect.value
+    };
+
+    // Save to Firestore
     await db.collection('users').doc(currentUserID).set(profileData,{merge:true});
+
+    // Update UI immediately (fixes reverting username)
+    usernameInput.value = profileData.username;
+    avatarPreview.src = profileData.avatarURL || 'https://via.placeholder.com/150';
+    main.style.background = profileData.wallpaper;
+
     alert('Profile updated!');
-    avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
-    main.style.background=wallpaperSelect.value;
-    loadProfile();
   }catch(err){alert('Error saving profile: '+err.message);}
 });
 
@@ -299,10 +311,8 @@ async function loadFriendActions(){
   friendActions.innerHTML='';
   if(isOwnProfile) return;
 
-  // Check if already friends
   const friendDoc = await db.collection('users').doc(currentUserID)
     .collection('friends').doc(profileUserID).get();
-
   if(friendDoc.exists){
     const span=document.createElement('span');
     span.textContent='You are friends ✅';
@@ -310,10 +320,8 @@ async function loadFriendActions(){
     return;
   }
 
-  // Check if request already sent
   const reqDoc = await db.collection('users').doc(profileUserID)
     .collection('friendRequests').doc(currentUserID).get();
-
   if(reqDoc.exists){
     const span=document.createElement('span');
     span.textContent='Request Sent!';
@@ -392,5 +400,3 @@ loadProfile();
 </script>
 </body>
 </html>
-
-
