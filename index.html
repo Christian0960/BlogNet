@@ -89,6 +89,7 @@ const dmDot=document.getElementById('dm-dot');
 let currentFilter='public';
 let friendIds=new Set();
 let lastSeenMap={};
+const userCache={}; // all users, including current user
 
 if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
@@ -107,7 +108,7 @@ function formatTimestamp(date){
   return `${diffDays} days ago`;
 }
 
-// Filter buttons
+// -------------------- FILTER BUTTONS --------------------
 buttons.forEach(btn=>{
   btn.addEventListener('click',()=>{
     buttons.forEach(b=>b.classList.remove('active'));
@@ -120,53 +121,44 @@ buttons.forEach(btn=>{
 // Profile button
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
 
-// ------------------- DM RED DOT -------------------
-function setupDMListener() {
-  db.collection('users').doc(currentUserID).collection('dms')
-    .onSnapshot(dmSnap => {
-      let hasNew = false;
-      dmSnap.forEach(friendDoc => {
-        const friendID = friendDoc.id;
-        db.collection('users').doc(currentUserID)
-          .collection('dms').doc(friendID)
-          .collection('messages')
-          .orderBy('timestamp','desc')
-          .limit(1)
-          .get()
-          .then(msgSnap=>{
-            if(!msgSnap.empty){
-              const msg = msgSnap.docs[0].data();
-              const lastChecked = parseInt(localStorage.getItem('lastCheckedDM_'+friendID)) || 0;
-              if(msg.senderID !== currentUserID && msg.timestamp?.toMillis() > lastChecked){
-                hasNew = true;
-              }
-            }
-          });
-      });
-      setTimeout(()=>{ dmDot.style.display = hasNew?'block':'none'; }, 300);
-    });
+// -------------------- DM RED DOT --------------------
+async function updateDMDot() {
+  const dmSnap = await db.collection('users').doc(currentUserID).collection('dms').get();
+  let hasNew=false;
+  await Promise.all(dmSnap.docs.map(async doc=>{
+    const friendID = doc.id;
+    const msgSnap = await db.collection('users').doc(currentUserID).collection('dms').doc(friendID)
+      .collection('messages').orderBy('timestamp','desc').limit(1).get();
+    if(!msgSnap.empty){
+      const msg = msgSnap.docs[0].data();
+      const lastChecked = parseInt(localStorage.getItem('lastCheckedDM_'+friendID)) || 0;
+      if(msg.senderID !== currentUserID && msg.timestamp?.toMillis() > lastChecked){
+        hasNew = true;
+      }
+    }
+  }));
+  dmDot.style.display = hasNew?'block':'none';
 }
-setupDMListener();
 
-dmBtn.addEventListener('click', () => {
-  // Mark all DMs as seen
-  db.collection('users').doc(currentUserID).collection('dms').get().then(snap => {
-    snap.forEach(doc => {
-      db.collection('users').doc(currentUserID).collection('dms').doc(doc.id)
-        .collection('messages').orderBy('timestamp','desc').limit(1)
-        .get().then(msgSnap => {
-          if(!msgSnap.empty){
-            const ts = msgSnap.docs[0].data().timestamp?.toMillis() || Date.now();
-            localStorage.setItem('lastCheckedDM_'+doc.id, ts);
-          }
-        });
-    });
-  });
-  dmDot.style.display = 'none';
-  window.location.href = 'messages.html';
+db.collection('users').doc(currentUserID).collection('dms').onSnapshot(updateDMDot);
+updateDMDot();
+
+dmBtn.addEventListener('click', async ()=>{
+  const dmSnap = await db.collection('users').doc(currentUserID).collection('dms').get();
+  for(const doc of dmSnap.docs){
+    const friendID = doc.id;
+    const msgSnap = await db.collection('users').doc(currentUserID).collection('dms').doc(friendID)
+      .collection('messages').orderBy('timestamp','desc').limit(1).get();
+    if(!msgSnap.empty){
+      const ts = msgSnap.docs[0].data().timestamp?.toMillis() || Date.now();
+      localStorage.setItem('lastCheckedDM_'+friendID, ts);
+    }
+  }
+  dmDot.style.display='none';
+  window.location.href='messages.html';
 });
 
-// Fetch friends
+// -------------------- FRIENDS & POSTS --------------------
 function subscribeFriends(){
   db.collection('users').doc(currentUserID).collection('friends').onSnapshot(snap=>{
     friendIds=new Set();
@@ -174,23 +166,27 @@ function subscribeFriends(){
     friendIds.add(currentUserID);
     db.collection('users').doc(currentUserID).get().then(doc=>{
       if(doc.exists && doc.data().lastSeen) lastSeenMap=doc.data().lastSeen;
+      if(doc.exists) userCache[currentUserID] = doc.data();
       fetchPosts();
     });
   });
 }
 subscribeFriends();
 
-// Posts
-let cachedPosts=[];
-const userCache={};
-
+// Fetch missing users
 async function fetchMissingUsers(authorIds){
-  const missing=authorIds.filter(id=>!userCache[id]);
+  const missing = authorIds.filter(id=>!userCache[id]);
   if(!missing.length) return;
-  const chunks=[]; while(missing.length) chunks.push(missing.splice(0,10));
-  await Promise.all(chunks.map(list=>db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',list).get().then(s=>s.forEach(u=>userCache[u.id]=u.data()||{}))));
+  const chunks=[];
+  while(missing.length) chunks.push(missing.splice(0,10));
+  await Promise.all(chunks.map(list=>
+    db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',list)
+      .get().then(snap=>snap.forEach(u=>userCache[u.id]=u.data()||{}))
+  ));
 }
 
+// Fetch posts
+let cachedPosts=[];
 async function fetchPosts(){
   const postsPromises = [...friendIds].map(uid=>db.collection('users').doc(uid).collection('profilePosts').orderBy('timestamp','desc').get());
   const profileSnaps = await Promise.all(postsPromises);
@@ -198,30 +194,33 @@ async function fetchPosts(){
   const publicSnap = await db.collection('publicPosts').orderBy('timestamp','desc').get();
   const publicPosts = publicSnap.docs.map(d=>({id:d.id,data:d.data(), type:'public'}));
   cachedPosts = [...profilePosts, ...publicPosts];
-  const authors=[...new Set(cachedPosts.map(p=>p.data.authorId).filter(Boolean))];
+  const authors = [...new Set(cachedPosts.map(p=>p.data.authorId).filter(Boolean))];
   await fetchMissingUsers(authors);
   renderFeed();
 }
 
+// Render feed
 function renderFeed(){
   feed.innerHTML='';
   cachedPosts.forEach(p=>{
-    const post=p.data;
-    const authorId=post.authorId||'friend_alpha';
-    const userData=userCache[authorId]||{username:authorId, avatarURL:'https://via.placeholder.com/40'};
-    const article=document.createElement('article');
+    const post = p.data;
+    const authorId = post.authorId || currentUserID; // fallback to current user
+    const userData = userCache[authorId] || {username:authorId, avatarURL:'https://via.placeholder.com/40'};
+    const article = document.createElement('article');
     article.className='post';
     article.dataset.type=p.type;
     article.dataset.author=authorId;
-    let show=true;
+
+    let show = true;
     if(currentFilter==='public') show=(p.type==='public');
     else if(currentFilter==='friends') show=(p.type==='profile' && friendIds.has(authorId));
     else if(currentFilter==='unseen'){
-      const lastSeen=lastSeenMap[authorId]||0;
-      const postTime=post.timestamp?post.timestamp.toDate().getTime():0;
+      const lastSeen = lastSeenMap[authorId]||0;
+      const postTime = post.timestamp?post.timestamp.toDate().getTime():0;
       show=(p.type==='profile' && postTime>lastSeen);
     }
-    article.style.display=show?'flex':'none';
+
+    article.style.display = show?'flex':'none';
     article.innerHTML=`
       <img src="${userData.avatarURL}" alt="avatar" class="profile-link" data-userid="${authorId}">
       <div class="post-content">
@@ -235,18 +234,20 @@ function renderFeed(){
   });
 }
 
-// Posting
+// -------------------- POSTING --------------------
 form.addEventListener('submit', async e=>{
   e.preventDefault();
-  const content=textarea.value.trim();
+  const content = textarea.value.trim();
   if(!content) return alert('Write something!');
-  const newUsername=usernameInput.value.trim()||'friend_alpha';
-  localStorage.setItem('username',newUsername);
-  const userRef=db.collection('users').doc(currentUserID);
-  const userDoc=await userRef.get();
-  const existing=userDoc.exists?userDoc.data():{};
+  const newUsername = usernameInput.value.trim() || 'friend_alpha';
+  localStorage.setItem('username', newUsername);
+
+  const userRef = db.collection('users').doc(currentUserID);
+  const userDoc = await userRef.get();
+  const existing = userDoc.exists ? userDoc.data() : {};
   await userRef.set({username:newUsername, avatarURL:existing.avatarURL||'https://via.placeholder.com/40'},{merge:true});
-  
+  userCache[currentUserID] = {username:newUsername, avatarURL:existing.avatarURL||'https://via.placeholder.com/40'};
+
   try{
     if(currentFilter==='public'){
       await db.collection('publicPosts').add({
@@ -269,7 +270,7 @@ form.addEventListener('submit', async e=>{
     }
     textarea.value='';
     fetchPosts();
-  }catch(err){alert('Error posting: '+err.message);}
+  } catch(err){ alert('Error posting: '+err.message); }
 });
 </script>
 </body>
