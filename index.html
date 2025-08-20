@@ -62,8 +62,17 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 const SECRET_KEY="MY_SECRET_KEY";
+
+// ---------------- USER IDS ----------------
 let currentUserID = localStorage.getItem('userId');
-if(!currentUserID){ currentUserID='user_'+Date.now()+'_'+Math.floor(Math.random()*1000); localStorage.setItem('userId',currentUserID); }
+if(!currentUserID){ 
+  currentUserID='user_'+Date.now()+'_'+Math.floor(Math.random()*1000); 
+  localStorage.setItem('userId',currentUserID); 
+}
+
+// The profile being viewed
+const urlParams = new URLSearchParams(window.location.search);
+const profileOwnerId = urlParams.get('user') || currentUserID;
 
 const firebaseConfig = {
   apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
@@ -76,6 +85,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// ---------------- ELEMENTS ----------------
 const buttons=document.querySelectorAll('.filter-btn');
 const feed=document.getElementById('feed');
 const form=document.getElementById('post-form');
@@ -187,9 +197,9 @@ async function fetchMissingUsers(authorIds){
 
 let cachedPosts=[];
 async function fetchPosts(){
-  const postsPromises = [...friendIds].map(uid=>db.collection('users').doc(uid).collection('profilePosts').orderBy('timestamp','desc').get());
-  const profileSnaps = await Promise.all(postsPromises);
-  const profilePosts = profileSnaps.flatMap(snap => snap.docs.map(d=>({id:d.id,data:d.data(), type:'profile'})));
+  // Fetch profile posts only for this profileOwnerId
+  const profileSnap = await db.collection('users').doc(profileOwnerId).collection('profilePosts').orderBy('timestamp','desc').get();
+  const profilePosts = profileSnap.docs.map(d=>({id:d.id,data:d.data(), type:'profile'}));
   const publicSnap = await db.collection('publicPosts').orderBy('timestamp','desc').get();
   const publicPosts = publicSnap.docs.map(d=>({id:d.id,data:d.data(), type:'public'}));
   cachedPosts = [...profilePosts, ...publicPosts];
@@ -257,9 +267,11 @@ form.addEventListener('submit', async e=>{
     if(currentFilter==='public'){
       await db.collection('publicPosts').add(postData);
     } else {
-      await db.collection('users').doc(currentUserID).collection('profilePosts').add(postData);
-      lastSeenMap[currentUserID]=Date.now();
-      await userRef.set({lastSeen:lastSeenMap},{merge:true});
+      await db.collection('users').doc(profileOwnerId).collection('profilePosts').add(postData);
+      if(profileOwnerId===currentUserID){
+        lastSeenMap[currentUserID]=Date.now();
+        await userRef.set({lastSeen:lastSeenMap},{merge:true});
+      }
     }
     textarea.value='';
     setTimeout(fetchPosts, 300);
