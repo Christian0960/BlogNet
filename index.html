@@ -86,7 +86,7 @@ const profileBtn=document.getElementById('profile-btn');
 const dmBtn=document.getElementById('dm-btn');
 const dmDot=document.getElementById('dm-dot');
 
-let currentFilter='public'; // Default filter
+let currentFilter='public';
 let friendIds=new Set();
 let lastSeenMap={};
 
@@ -117,8 +117,54 @@ buttons.forEach(btn=>{
   });
 });
 
-// Profile & DM buttons
+// Profile button
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
+
+// ------------------- DM RED DOT -------------------
+function setupDMListener() {
+  db.collection('users').doc(currentUserID).collection('dms')
+    .onSnapshot(dmSnap => {
+      let hasNew = false;
+      dmSnap.forEach(friendDoc => {
+        const friendID = friendDoc.id;
+        db.collection('users').doc(currentUserID)
+          .collection('dms').doc(friendID)
+          .collection('messages')
+          .orderBy('timestamp','desc')
+          .limit(1)
+          .get()
+          .then(msgSnap=>{
+            if(!msgSnap.empty){
+              const msg = msgSnap.docs[0].data();
+              const lastChecked = parseInt(localStorage.getItem('lastCheckedDM_'+friendID)) || 0;
+              if(msg.senderID !== currentUserID && msg.timestamp?.toMillis() > lastChecked){
+                hasNew = true;
+              }
+            }
+          });
+      });
+      setTimeout(()=>{ dmDot.style.display = hasNew?'block':'none'; }, 300);
+    });
+}
+setupDMListener();
+
+dmBtn.addEventListener('click', () => {
+  // Mark all DMs as seen
+  db.collection('users').doc(currentUserID).collection('dms').get().then(snap => {
+    snap.forEach(doc => {
+      db.collection('users').doc(currentUserID).collection('dms').doc(doc.id)
+        .collection('messages').orderBy('timestamp','desc').limit(1)
+        .get().then(msgSnap => {
+          if(!msgSnap.empty){
+            const ts = msgSnap.docs[0].data().timestamp?.toMillis() || Date.now();
+            localStorage.setItem('lastCheckedDM_'+doc.id, ts);
+          }
+        });
+    });
+  });
+  dmDot.style.display = 'none';
+  window.location.href = 'messages.html';
+});
 
 // Fetch friends
 function subscribeFriends(){
@@ -129,7 +175,6 @@ function subscribeFriends(){
     db.collection('users').doc(currentUserID).get().then(doc=>{
       if(doc.exists && doc.data().lastSeen) lastSeenMap=doc.data().lastSeen;
       fetchPosts();
-      checkNewDMs(); // Check for new DMs on load
     });
   });
 }
@@ -225,54 +270,6 @@ form.addEventListener('submit', async e=>{
     textarea.value='';
     fetchPosts();
   }catch(err){alert('Error posting: '+err.message);}
-});
-
-// ------------------- DM RED DOT -------------------
-function checkNewDMs() {
-  db.collection('users').doc(currentUserID).collection('dms').onSnapshot(dmSnap => {
-    let hasNew = false;
-    dmSnap.forEach(friendDoc => {
-      const friendID = friendDoc.id;
-      db.collection('users').doc(currentUserID)
-        .collection('dms').doc(friendID)
-        .collection('messages')
-        .orderBy('timestamp', 'desc')
-        .limit(1)
-        .get()
-        .then(msgSnap => {
-          if (!msgSnap.empty) {
-            const msg = msgSnap.docs[0].data();
-            const lastChecked = parseInt(localStorage.getItem('lastCheckedDM_' + friendID)) || 0;
-            if (msg.senderID !== currentUserID && msg.timestamp?.toMillis() > lastChecked) {
-              hasNew = true;
-              dmDot.style.display = 'block';
-            }
-          }
-        });
-    });
-    if (!hasNew) dmDot.style.display = 'none';
-  });
-}
-
-function markDMsAsSeen() {
-  db.collection('users').doc(currentUserID).collection('dms').get().then(snap => {
-    snap.forEach(doc => {
-      db.collection('users').doc(currentUserID).collection('dms').doc(doc.id)
-        .collection('messages').orderBy('timestamp', 'desc').limit(1)
-        .get().then(msgSnap => {
-          if (!msgSnap.empty) {
-            const ts = msgSnap.docs[0].data().timestamp?.toMillis() || Date.now();
-            localStorage.setItem('lastCheckedDM_' + doc.id, ts);
-          }
-        });
-    });
-  });
-  dmDot.style.display = 'none';
-}
-
-dmBtn.addEventListener('click', () => {
-  markDMsAsSeen();
-  window.location.href = 'messages.html';
 });
 </script>
 </body>
