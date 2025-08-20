@@ -132,8 +132,6 @@ const newPostContainer=document.getElementById('new-post-container');
 const friendRequestsContainer=document.getElementById('friend-requests-container');
 const songPlayer=document.getElementById('song-player');
 
-const SECRET_KEY = "MY_SECRET_KEY"; // must match your Firestore rules
-
 function formatTimestamp(date){
   const now=new Date(); const diffMs=now-date; const diffMins=Math.floor(diffMs/60000);
   if(diffMins<1)return'just now'; if(diffMins===1)return'1 minute ago'; if(diffMins<60)return`${diffMins} minutes ago`;
@@ -188,9 +186,6 @@ async function loadProfile(){
       saveBtn.style.display='none'; submitPostBtn.style.display='none'; newPostContainer.style.display='none';
     }
 
-    loadFriends();
-    setupFriendActions();
-    loadFriendRequests();
     loadBlogPosts();
   }catch(err){console.error('Error loading profile:',err);}
 }
@@ -212,24 +207,32 @@ saveBtn.addEventListener('click',async()=>{
   }catch(err){alert('Error saving profile: '+err.message);}
 });
 
-// Load profile posts
-async function loadBlogPosts(){
+// Load profile posts in realtime
+function loadBlogPosts(){
   blogPostsContainer.innerHTML='Loading posts...';
-  try{
-    const snapshot = await db.collection('users').doc(profileUserID)
-      .collection('profilePosts').orderBy('timestamp','desc').get();
-    blogPostsContainer.innerHTML='';
-    snapshot.forEach(doc=>{
-      const data = doc.data();
-      const postDiv = document.createElement('div');
-      postDiv.className='blog-post';
-      postDiv.innerHTML = `<div class="timestamp">${data.timestamp?.toDate?formatTimestamp(data.timestamp.toDate()):''}</div>${data.content}`;
-      blogPostsContainer.appendChild(postDiv);
+  db.collection('users').doc(profileUserID)
+    .collection('profilePosts')
+    .orderBy('timestamp','desc')
+    .onSnapshot(snapshot=>{
+      blogPostsContainer.innerHTML='';
+      if(snapshot.empty){ blogPostsContainer.innerHTML='<p>No posts yet.</p>'; return; }
+      snapshot.forEach(doc=>{
+        const data=doc.data();
+        const postDiv=document.createElement('div');
+        postDiv.className='blog-post';
+        postDiv.innerHTML = `
+          <div class="timestamp">
+            ${data.username ? `<strong>${data.username}</strong> - ` : ''}
+            ${data.timestamp?.toDate ? formatTimestamp(data.timestamp.toDate()) : ''}
+          </div>
+          ${data.content}
+        `;
+        blogPostsContainer.appendChild(postDiv);
+      });
+    }, err=>{
+      console.error('Error loading posts:',err);
+      blogPostsContainer.innerHTML='Error loading posts.';
     });
-  }catch(err){
-    blogPostsContainer.innerHTML='Error loading posts.';
-    console.error('Error loading posts:',err);
-  }
 }
 
 // New post
@@ -237,14 +240,17 @@ submitPostBtn.addEventListener('click', async () => {
   const content = newPostInput.value.trim();
   if (!content) return alert('Cannot post empty content.');
   try {
+    // Get current username for the post
+    const userDoc = await db.collection('users').doc(currentUserID).get();
+    const username = userDoc.exists ? userDoc.data().username : "Anonymous";
+
     await db.collection('users').doc(currentUserID)
       .collection('profilePosts').add({
         content: content,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        key: SECRET_KEY // Added key for Firestore rules
+        username: username,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
     newPostInput.value = '';
-    loadBlogPosts();
   } catch (err) {
     alert('Error posting blog: ' + err.message);
   }
