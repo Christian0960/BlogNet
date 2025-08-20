@@ -76,7 +76,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// DOM Elements
 const buttons=document.querySelectorAll('.filter-btn');
 const feed=document.getElementById('feed');
 const form=document.getElementById('post-form');
@@ -89,7 +88,7 @@ const dmDot=document.getElementById('dm-dot');
 let currentFilter='public';
 let friendIds=new Set();
 let lastSeenMap={};
-const userCache={}; // all users, including current user
+const userCache={};
 
 if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
@@ -108,7 +107,7 @@ function formatTimestamp(date){
   return `${diffDays} days ago`;
 }
 
-// -------------------- FILTER BUTTONS --------------------
+// ---------------- FILTER BUTTONS ----------------
 buttons.forEach(btn=>{
   btn.addEventListener('click',()=>{
     buttons.forEach(b=>b.classList.remove('active'));
@@ -121,7 +120,7 @@ buttons.forEach(btn=>{
 // Profile button
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
 
-// -------------------- DM RED DOT --------------------
+// ---------------- DM RED DOT ----------------
 async function updateDMDot() {
   const dmSnap = await db.collection('users').doc(currentUserID).collection('dms').get();
   let hasNew=false;
@@ -132,14 +131,14 @@ async function updateDMDot() {
     if(!msgSnap.empty){
       const msg = msgSnap.docs[0].data();
       const lastChecked = parseInt(localStorage.getItem('lastCheckedDM_'+friendID)) || 0;
-      if(msg.senderID !== currentUserID && msg.timestamp?.toMillis() > lastChecked){
+      const ts = msg.timestamp?.toMillis() || 0;
+      if(msg.senderID !== currentUserID && ts > lastChecked){
         hasNew = true;
       }
     }
   }));
   dmDot.style.display = hasNew?'block':'none';
 }
-
 db.collection('users').doc(currentUserID).collection('dms').onSnapshot(updateDMDot);
 updateDMDot();
 
@@ -158,22 +157,23 @@ dmBtn.addEventListener('click', async ()=>{
   window.location.href='messages.html';
 });
 
-// -------------------- FRIENDS & POSTS --------------------
+// ---------------- FRIENDS & POSTS ----------------
 function subscribeFriends(){
   db.collection('users').doc(currentUserID).collection('friends').onSnapshot(snap=>{
     friendIds=new Set();
     snap.forEach(doc=>friendIds.add(doc.id));
     friendIds.add(currentUserID);
     db.collection('users').doc(currentUserID).get().then(doc=>{
-      if(doc.exists && doc.data().lastSeen) lastSeenMap=doc.data().lastSeen;
-      if(doc.exists) userCache[currentUserID] = doc.data();
+      if(doc.exists){
+        if(doc.data().lastSeen) lastSeenMap=doc.data().lastSeen;
+        userCache[currentUserID] = doc.data();
+      }
       fetchPosts();
     });
   });
 }
 subscribeFriends();
 
-// Fetch missing users
 async function fetchMissingUsers(authorIds){
   const missing = authorIds.filter(id=>!userCache[id]);
   if(!missing.length) return;
@@ -185,7 +185,6 @@ async function fetchMissingUsers(authorIds){
   ));
 }
 
-// Fetch posts
 let cachedPosts=[];
 async function fetchPosts(){
   const postsPromises = [...friendIds].map(uid=>db.collection('users').doc(uid).collection('profilePosts').orderBy('timestamp','desc').get());
@@ -199,12 +198,11 @@ async function fetchPosts(){
   renderFeed();
 }
 
-// Render feed
 function renderFeed(){
   feed.innerHTML='';
   cachedPosts.forEach(p=>{
     const post = p.data;
-    const authorId = post.authorId || currentUserID; // fallback to current user
+    const authorId = post.authorId;
     const userData = userCache[authorId] || {username:authorId, avatarURL:'https://via.placeholder.com/40'};
     const article = document.createElement('article');
     article.className='post';
@@ -234,7 +232,7 @@ function renderFeed(){
   });
 }
 
-// -------------------- POSTING --------------------
+// ---------------- POSTING ----------------
 form.addEventListener('submit', async e=>{
   e.preventDefault();
   const content = textarea.value.trim();
@@ -249,27 +247,22 @@ form.addEventListener('submit', async e=>{
   userCache[currentUserID] = {username:newUsername, avatarURL:existing.avatarURL||'https://via.placeholder.com/40'};
 
   try{
+    const postData = {
+      authorId:currentUserID,
+      content:sanitizeText(content),
+      timestamp:firebase.firestore.FieldValue.serverTimestamp(),
+      type: currentFilter==='public' ? 'public' : 'profile',
+      key:SECRET_KEY
+    };
     if(currentFilter==='public'){
-      await db.collection('publicPosts').add({
-        authorId:currentUserID,
-        content:sanitizeText(content),
-        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
-        type:'public',
-        key:SECRET_KEY
-      });
+      await db.collection('publicPosts').add(postData);
     } else {
-      await db.collection('users').doc(currentUserID).collection('profilePosts').add({
-        authorId:currentUserID,
-        content:sanitizeText(content),
-        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
-        type:'profile',
-        key:SECRET_KEY
-      });
+      await db.collection('users').doc(currentUserID).collection('profilePosts').add(postData);
       lastSeenMap[currentUserID]=Date.now();
       await userRef.set({lastSeen:lastSeenMap},{merge:true});
     }
     textarea.value='';
-    fetchPosts();
+    setTimeout(fetchPosts, 300);
   } catch(err){ alert('Error posting: '+err.message); }
 });
 </script>
