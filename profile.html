@@ -30,6 +30,7 @@
   .notif-item button { margin-left:5px; background:#3399ff; border:none; color:white; padding:2px 6px; border-radius:3px; cursor:pointer; font-size:12px; }
   .notif-item button:hover { background:#2277cc; }
   #song-player { margin:10px 0; }
+  iframe { width:100%; height:200px; border:none; border-radius:6px; }
 </style>
 </head>
 <body>
@@ -60,8 +61,8 @@
   <label for="movie-input">Favorite Movie:</label>
   <input type="text" id="movie-input" placeholder="Optional">
 
-  <label for="song-input">Favorite Song (MP3 URL):</label>
-  <input type="url" id="song-input" placeholder="Paste MP3 link">
+  <label for="song-input">Favorite Song (YouTube URL):</label>
+  <input type="url" id="song-input" placeholder="Paste YouTube link">
   <div id="song-player"></div>
 
   <label for="birthday-input">Birthday:</label>
@@ -138,6 +139,20 @@ function formatTimestamp(date){
   const diffDays=Math.floor(diffHrs/24); if(diffDays===1)return'1 day ago'; return`${diffDays} days ago`;
 }
 
+// Convert YouTube URL to embed
+function getYouTubeEmbedURL(url){
+  try{
+    const urlObj=new URL(url);
+    if(urlObj.hostname.includes("youtube.com") && urlObj.searchParams.get("v")){
+      return "https://www.youtube.com/embed/"+urlObj.searchParams.get("v");
+    }
+    if(urlObj.hostname==="youtu.be"){
+      return "https://www.youtube.com/embed/"+urlObj.pathname.slice(1);
+    }
+  }catch(e){}
+  return null;
+}
+
 // Load profile
 async function loadProfile(){
   try{
@@ -153,14 +168,17 @@ async function loadProfile(){
     avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
     main.style.background=wallpaperSelect.value;
 
-    // Show audio player if song exists
+    // Show YouTube embed if song exists
     songPlayer.innerHTML='';
     if(data.favoriteSong){
-      const audio=document.createElement('audio');
-      audio.controls=true;
-      audio.src=data.favoriteSong;
-      audio.style.width='100%';
-      songPlayer.appendChild(audio);
+      const embedURL=getYouTubeEmbedURL(data.favoriteSong);
+      if(embedURL){
+        const iframe=document.createElement('iframe');
+        iframe.src=embedURL;
+        iframe.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+        iframe.allowFullscreen=true;
+        songPlayer.appendChild(iframe);
+      }
     }
 
     if(!isOwnProfile){
