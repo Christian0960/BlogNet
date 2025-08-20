@@ -102,15 +102,28 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 // Firebase init
-const firebaseConfig = { apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0", authDomain:"the-blog-network.firebaseapp.com", projectId:"the-blog-network", storageBucket:"the-blog-network.appspot.com", messagingSenderId:"857847462134", appId:"1:857847462134:web:a22e9a6467a230632b94d7" };
+const firebaseConfig = { 
+  apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0", 
+  authDomain:"the-blog-network.firebaseapp.com", 
+  projectId:"the-blog-network", 
+  storageBucket:"the-blog-network.appspot.com", 
+  messagingSenderId:"857847462134", 
+  appId:"1:857847462134:web:a22e9a6467a230632b94d7" 
+};
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// 🔑 Secret key used for posting
+const SECRET_KEY = "MY_SECRET_KEY";
+
 let currentUserID = localStorage.getItem('userId');
-if(!currentUserID) { currentUserID='user_'+Date.now()+'_'+Math.floor(Math.random()*1000); localStorage.setItem('userId',currentUserID);}
+if (!currentUserID) {
+  currentUserID = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  localStorage.setItem('userId', currentUserID);
+}
 const urlParams = new URLSearchParams(window.location.search);
-const profileUserID = urlParams.get('user')||currentUserID;
-const isOwnProfile = profileUserID===currentUserID;
+const profileUserID = urlParams.get('user') || currentUserID;
+const isOwnProfile = profileUserID === currentUserID;
 
 // Elements
 const usernameInput=document.getElementById('username-input');
@@ -127,19 +140,25 @@ const blogPostsContainer=document.getElementById('blog-posts-container');
 const newPostInput=document.getElementById('new-post-input');
 const submitPostBtn=document.getElementById('submit-post-btn');
 const friendsContainer=document.getElementById('friends-container');
-const friendActions=document.getElementById('friend-actions');
-const newPostContainer=document.getElementById('new-post-container');
 const friendRequestsContainer=document.getElementById('friend-requests-container');
 const songPlayer=document.getElementById('song-player');
+const newPostContainer=document.getElementById('new-post-container');
 
 function formatTimestamp(date){
-  const now=new Date(); const diffMs=now-date; const diffMins=Math.floor(diffMs/60000);
-  if(diffMins<1)return'just now'; if(diffMins===1)return'1 minute ago'; if(diffMins<60)return`${diffMins} minutes ago`;
-  const diffHrs=Math.floor(diffMins/60); if(diffHrs===1)return'1 hour ago'; if(diffHrs<24)return`${diffHrs} hours ago`;
-  const diffDays=Math.floor(diffHrs/24); if(diffDays===1)return'1 day ago'; return`${diffDays} days ago`;
+  const now=new Date(); 
+  const diffMs=now-date; 
+  const diffMins=Math.floor(diffMs/60000);
+  if(diffMins<1)return'just now'; 
+  if(diffMins===1)return'1 minute ago'; 
+  if(diffMins<60)return`${diffMins} minutes ago`;
+  const diffHrs=Math.floor(diffMins/60); 
+  if(diffHrs===1)return'1 hour ago'; 
+  if(diffHrs<24)return`${diffHrs} hours ago`;
+  const diffDays=Math.floor(diffHrs/24); 
+  if(diffDays===1)return'1 day ago'; 
+  return`${diffDays} days ago`;
 }
 
-// Convert YouTube URL to embed
 function getYouTubeEmbedURL(url){
   try{
     const urlObj=new URL(url);
@@ -168,7 +187,7 @@ async function loadProfile(){
     avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
     main.style.background=wallpaperSelect.value;
 
-    // Show YouTube embed if song exists
+    // Show YouTube embed
     songPlayer.innerHTML='';
     if(data.favoriteSong){
       const embedURL=getYouTubeEmbedURL(data.favoriteSong);
@@ -187,6 +206,8 @@ async function loadProfile(){
     }
 
     loadBlogPosts();
+    loadFriends();
+    loadFriendRequests();
   }catch(err){console.error('Error loading profile:',err);}
 }
 
@@ -207,7 +228,7 @@ saveBtn.addEventListener('click',async()=>{
   }catch(err){alert('Error saving profile: '+err.message);}
 });
 
-// Load profile posts in realtime
+// Blog posts
 function loadBlogPosts(){
   blogPostsContainer.innerHTML='Loading posts...';
   db.collection('users').doc(profileUserID)
@@ -235,12 +256,10 @@ function loadBlogPosts(){
     });
 }
 
-// New post
 submitPostBtn.addEventListener('click', async () => {
   const content = newPostInput.value.trim();
   if (!content) return alert('Cannot post empty content.');
   try {
-    // Get current username for the post
     const userDoc = await db.collection('users').doc(currentUserID).get();
     const username = userDoc.exists ? userDoc.data().username : "Anonymous";
 
@@ -248,13 +267,48 @@ submitPostBtn.addEventListener('click', async () => {
       .collection('profilePosts').add({
         content: content,
         username: username,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        key: SECRET_KEY // ✅ include secret key
       });
     newPostInput.value = '';
   } catch (err) {
     alert('Error posting blog: ' + err.message);
   }
 });
+
+// Friends
+function loadFriends(){
+  friendsContainer.innerHTML = 'Loading friends...';
+  db.collection('users').doc(profileUserID)
+    .collection('friends')
+    .onSnapshot(snapshot=>{
+      friendsContainer.innerHTML='';
+      if(snapshot.empty){ friendsContainer.innerHTML='<p>No friends yet.</p>'; return; }
+      snapshot.forEach(doc=>{
+        const friend=doc.data();
+        const p=document.createElement('p');
+        p.textContent=friend.username || doc.id;
+        friendsContainer.appendChild(p);
+      });
+    });
+}
+
+// Friend requests
+function loadFriendRequests(){
+  friendRequestsContainer.innerHTML='Loading friend requests...';
+  db.collection('users').doc(profileUserID)
+    .collection('friendRequests')
+    .onSnapshot(snapshot=>{
+      friendRequestsContainer.innerHTML='';
+      if(snapshot.empty){ friendRequestsContainer.innerHTML='<p>No requests.</p>'; return; }
+      snapshot.forEach(doc=>{
+        const req=doc.data();
+        const p=document.createElement('p');
+        p.textContent=`${req.fromUsername || 'Unknown'} wants to be friends`;
+        friendRequestsContainer.appendChild(p);
+      });
+    });
+}
 
 // Avatar & wallpaper preview
 avatarInput.addEventListener('input',()=>avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150');
@@ -263,8 +317,8 @@ wallpaperSelect.addEventListener('change',()=>main.style.background=wallpaperSel
 // Back button
 document.getElementById('back-btn').addEventListener('click',()=>window.location.href='index.html');
 
-// Initial load
 loadProfile();
 </script>
 </body>
 </html>
+
