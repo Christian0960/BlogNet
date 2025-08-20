@@ -86,7 +86,7 @@ const profileBtn=document.getElementById('profile-btn');
 const dmBtn=document.getElementById('dm-btn');
 const dmDot=document.getElementById('dm-dot');
 
-let currentFilter='public'; // Default filter
+let currentFilter='public';
 let friendIds=new Set();
 let lastSeenMap={};
 
@@ -142,8 +142,13 @@ const userCache={};
 async function fetchMissingUsers(authorIds){
   const missing=authorIds.filter(id=>!userCache[id]);
   if(!missing.length) return;
-  const chunks=[]; while(missing.length) chunks.push(missing.splice(0,10));
-  await Promise.all(chunks.map(list=>db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',list).get().then(s=>s.forEach(u=>userCache[u.id]=u.data()||{}))));
+  const chunks=[];
+  while(missing.length) chunks.push(missing.splice(0,10));
+  await Promise.all(chunks.map(list=>{
+    return db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',list)
+      .get()
+      .then(s=>s.forEach(u=>userCache[u.id]=u.data()||{}));
+  }));
 }
 
 async function fetchPosts(){
@@ -162,12 +167,13 @@ function renderFeed(){
   feed.innerHTML='';
   cachedPosts.forEach(p=>{
     const post=p.data;
-    const authorId=post.authorId||'friend_alpha';
-    const userData=userCache[authorId]||{username:authorId, avatarURL:'https://via.placeholder.com/40'};
+    const authorId=post.authorId || currentUserID; // Fallback only to the actual current user
+    const userData=userCache[authorId]||{username:'Unknown', avatarURL:'https://via.placeholder.com/40'};
     const article=document.createElement('article');
     article.className='post';
     article.dataset.type=p.type;
     article.dataset.author=authorId;
+
     let show=true;
     if(currentFilter==='public') show=(p.type==='public');
     else if(currentFilter==='friends') show=(p.type==='profile' && friendIds.has(authorId));
@@ -176,6 +182,7 @@ function renderFeed(){
       const postTime=post.timestamp?post.timestamp.toDate().getTime():0;
       show=(p.type==='profile' && postTime>lastSeen);
     }
+
     article.style.display=show?'flex':'none';
     article.innerHTML=`
       <img src="${userData.avatarURL}" alt="avatar" class="profile-link" data-userid="${authorId}">
@@ -195,7 +202,7 @@ form.addEventListener('submit', async e=>{
   e.preventDefault();
   const content=textarea.value.trim();
   if(!content) return alert('Write something!');
-  const newUsername=usernameInput.value.trim()||'friend_alpha';
+  const newUsername=usernameInput.value.trim()||'Unknown';
   localStorage.setItem('username',newUsername);
   const userRef=db.collection('users').doc(currentUserID);
   const userDoc=await userRef.get();
