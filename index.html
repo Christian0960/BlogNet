@@ -226,6 +226,59 @@ form.addEventListener('submit', async e=>{
     fetchPosts();
   }catch(err){alert('Error posting: '+err.message);}
 });
+
+  function checkNewDMs() {
+  db.collection('users').doc(currentUserID).collection('dms').onSnapshot(dmSnap => {
+    let hasNew = false;
+    dmSnap.forEach(friendDoc => {
+      const friendID = friendDoc.id;
+      db.collection('users').doc(currentUserID)
+        .collection('dms').doc(friendID)
+        .collection('messages')
+        .orderBy('timestamp', 'desc')
+        .limit(1)
+        .get()
+        .then(msgSnap => {
+          if (!msgSnap.empty) {
+            const msg = msgSnap.docs[0].data();
+            const lastChecked = parseInt(localStorage.getItem('lastCheckedDM_' + friendID)) || 0;
+            if (msg.senderID !== currentUserID && msg.timestamp?.toMillis() > lastChecked) {
+              hasNew = true;
+              dmDot.style.display = 'block';
+            }
+          }
+        });
+    });
+    if (!hasNew) dmDot.style.display = 'none';
+  });
+}
+
+// Call this when the user opens the DM page
+function markDMsAsSeen() {
+  db.collection('users').doc(currentUserID).collection('dms').get().then(snap => {
+    snap.forEach(doc => {
+      db.collection('users').doc(currentUserID).collection('dms').doc(doc.id)
+        .collection('messages').orderBy('timestamp', 'desc').limit(1)
+        .get().then(msgSnap => {
+          if (!msgSnap.empty) {
+            const ts = msgSnap.docs[0].data().timestamp?.toMillis() || Date.now();
+            localStorage.setItem('lastCheckedDM_' + doc.id, ts);
+          }
+        });
+    });
+  });
+  dmDot.style.display = 'none';
+}
+
+// Initial check
+checkNewDMs();
+
+// When user clicks DM button
+dmBtn.addEventListener('click', () => {
+  markDMsAsSeen();
+  window.location.href = 'messages.html';
+});
 </script>
 </body>
 </html>
+
