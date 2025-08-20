@@ -119,7 +119,6 @@ buttons.forEach(btn=>{
 
 // Profile & DM buttons
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
-dmBtn.addEventListener('click',()=>{ window.location.href='messages.html'; });
 
 // Fetch friends
 function subscribeFriends(){
@@ -130,6 +129,7 @@ function subscribeFriends(){
     db.collection('users').doc(currentUserID).get().then(doc=>{
       if(doc.exists && doc.data().lastSeen) lastSeenMap=doc.data().lastSeen;
       fetchPosts();
+      checkNewDMs(); // Check for new DMs on load
     });
   });
 }
@@ -227,7 +227,8 @@ form.addEventListener('submit', async e=>{
   }catch(err){alert('Error posting: '+err.message);}
 });
 
-  function checkNewDMs() {
+// ------------------- DM RED DOT -------------------
+function checkNewDMs() {
   db.collection('users').doc(currentUserID).collection('dms').onSnapshot(dmSnap => {
     let hasNew = false;
     dmSnap.forEach(friendDoc => {
@@ -253,7 +254,6 @@ form.addEventListener('submit', async e=>{
   });
 }
 
-// Call this when the user opens the DM page
 function markDMsAsSeen() {
   db.collection('users').doc(currentUserID).collection('dms').get().then(snap => {
     snap.forEach(doc => {
@@ -270,10 +270,6 @@ function markDMsAsSeen() {
   dmDot.style.display = 'none';
 }
 
-// Initial check
-checkNewDMs();
-
-// When user clicks DM button
 dmBtn.addEventListener('click', () => {
   markDMsAsSeen();
   window.location.href = 'messages.html';
@@ -281,4 +277,3 @@ dmBtn.addEventListener('click', () => {
 </script>
 </body>
 </html>
-
