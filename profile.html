@@ -113,7 +113,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// 🔑 Secret key used for posting
+// Secret key for posting
 const SECRET_KEY = "MY_SECRET_KEY";
 
 let currentUserID = localStorage.getItem('userId');
@@ -141,6 +141,7 @@ const newPostInput=document.getElementById('new-post-input');
 const submitPostBtn=document.getElementById('submit-post-btn');
 const friendsContainer=document.getElementById('friends-container');
 const friendRequestsContainer=document.getElementById('friend-requests-container');
+const friendActions=document.getElementById('friend-actions');
 const songPlayer=document.getElementById('song-player');
 const newPostContainer=document.getElementById('new-post-container');
 
@@ -168,7 +169,7 @@ function getYouTubeEmbedURL(url){
     if(urlObj.hostname==="youtu.be"){
       return "https://www.youtube.com/embed/"+urlObj.pathname.slice(1);
     }
-  }catch(e){}
+  }catch(e){ }
   return null;
 }
 
@@ -187,7 +188,6 @@ async function loadProfile(){
     avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
     main.style.background=wallpaperSelect.value;
 
-    // Show YouTube embed
     songPlayer.innerHTML='';
     if(data.favoriteSong){
       const embedURL=getYouTubeEmbedURL(data.favoriteSong);
@@ -207,6 +207,7 @@ async function loadProfile(){
 
     loadBlogPosts();
     loadFriends();
+    loadFriendActions();
     loadFriendRequests();
   }catch(err){console.error('Error loading profile:',err);}
 }
@@ -268,7 +269,7 @@ submitPostBtn.addEventListener('click', async () => {
         content: content,
         username: username,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        key: SECRET_KEY // ✅ include secret key
+        key: SECRET_KEY
       });
     newPostInput.value = '';
   } catch (err) {
@@ -293,19 +294,71 @@ function loadFriends(){
     });
 }
 
-// Friend requests
+// Friend actions
+function loadFriendActions(){
+  friendActions.innerHTML='';
+  if(isOwnProfile) return;
+
+  const addBtn=document.createElement('button');
+  addBtn.textContent='Add Friend';
+  addBtn.addEventListener('click', async ()=>{
+    try{
+      const userDoc = await db.collection('users').doc(currentUserID).get();
+      const username = userDoc.exists ? userDoc.data().username : 'Anonymous';
+
+      await db.collection('users').doc(profileUserID)
+        .collection('friendRequests').doc(currentUserID)
+        .set({ fromUsername: username, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+      alert('Friend request sent!');
+      addBtn.disabled = true;
+    }catch(err){ alert('Error sending request: '+err.message); }
+  });
+  friendActions.appendChild(addBtn);
+}
+
+// Friend requests (only visible on own profile)
 function loadFriendRequests(){
   friendRequestsContainer.innerHTML='Loading friend requests...';
-  db.collection('users').doc(profileUserID)
+  if(!isOwnProfile) return;
+
+  db.collection('users').doc(currentUserID)
     .collection('friendRequests')
     .onSnapshot(snapshot=>{
       friendRequestsContainer.innerHTML='';
       if(snapshot.empty){ friendRequestsContainer.innerHTML='<p>No requests.</p>'; return; }
       snapshot.forEach(doc=>{
         const req=doc.data();
-        const p=document.createElement('p');
-        p.textContent=`${req.fromUsername || 'Unknown'} wants to be friends`;
-        friendRequestsContainer.appendChild(p);
+        const container=document.createElement('div');
+        container.className='notif-item';
+        const span=document.createElement('span');
+        span.textContent=`${req.fromUsername || 'Unknown'} wants to be friends`;
+
+        const acceptBtn=document.createElement('button');
+        acceptBtn.textContent='Accept';
+        acceptBtn.addEventListener('click', async ()=>{
+          const fromUserId = doc.id;
+          try{
+            const fromUserDoc = await db.collection('users').doc(fromUserId).get();
+            const fromUsername = fromUserDoc.exists ? fromUserDoc.data().username : 'Unknown';
+
+            await db.collection('users').doc(currentUserID).collection('friends').doc(fromUserId).set({ username: fromUsername });
+            await db.collection('users').doc(fromUserId).collection('friends').doc(currentUserID).set({ username: usernameInput.value });
+
+            await db.collection('users').doc(currentUserID).collection('friendRequests').doc(fromUserId).delete();
+            alert('Friend added!');
+          }catch(err){ alert('Error adding friend: '+err.message); }
+        });
+
+        const declineBtn=document.createElement('button');
+        declineBtn.textContent='Decline';
+        declineBtn.addEventListener('click', async ()=>{
+          await db.collection('users').doc(currentUserID).collection('friendRequests').doc(doc.id).delete();
+        });
+
+        container.appendChild(span);
+        container.appendChild(acceptBtn);
+        container.appendChild(declineBtn);
+        friendRequestsContainer.appendChild(container);
       });
     });
 }
