@@ -16,7 +16,7 @@ button.filter-btn:hover, #profile-btn:hover, #dm-btn:hover { background:#ffff66;
 button.filter-btn.active { background:#ffff99; border-color:#330066; box-shadow:2px 2px 4px #660099; }
 main { max-width:700px; margin:25px auto; padding:10px 20px; background:#ffffffcc; border:3px solid #3399ff; box-shadow:0 4px 10px rgba(0,0,0,0.2); border-radius:6px; min-height:300px; }
 form#post-form { max-width:700px; margin:0 auto 25px auto; background:#ffffffcc; padding:15px 20px; border:3px solid #9966ff; border-radius:6px; box-shadow:0 4px 8px rgba(153,102,255,0.5); display:flex; flex-direction:column; }
-input#username, textarea#post-content, select#post-type { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; margin-bottom:8px; }
+input#username, textarea#post-content { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; margin-bottom:8px; }
 textarea#post-content { min-height:60px; resize:vertical; }
 button#submit-post { margin-top:8px; background:#9966ff; border:none; padding:8px 16px; color:white; font-weight:bold; border-radius:4px; cursor:pointer; align-self:flex-end; transition:background 0.3s; }
 button#submit-post:hover { background:#7a3fcc; }
@@ -26,18 +26,7 @@ button#submit-post:hover { background:#7a3fcc; }
 .post-content .author a { text-decoration:none; color:#000080; font-weight:bold; cursor:pointer; }
 .post-content .author a:hover { text-decoration:underline; }
 footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Courier New', monospace; color:#333; }
-
-/* Red dot for DM */
-#dm-dot {
-  display:none;
-  width:10px;
-  height:10px;
-  background:red;
-  border-radius:50%;
-  position:absolute;
-  top:2px;
-  right:2px;
-}
+#dm-dot { display:none; width:10px; height:10px; background:red; border-radius:50%; position:absolute; top:2px; right:2px; }
 </style>
 </head>
 <body>
@@ -49,9 +38,9 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
   </div>
   <nav>
     <div style="display:flex; gap:10px; align-items:center;">
-      <button class="filter-btn active" data-filter="friends">Friends</button>
+      <button class="filter-btn" data-filter="friends">Friends</button>
       <button class="filter-btn" data-filter="unseen">Unseen</button>
-      <button class="filter-btn" data-filter="public">Public Chat</button>
+      <button class="filter-btn active" data-filter="public">Public Chat</button>
     </div>
     <div style="display:flex; gap:10px; align-items:center;">
       <button id="profile-btn" title="Profile">👤</button>
@@ -62,10 +51,6 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 
 <form id="post-form">
   <input type="text" id="username" placeholder="What's your name?" />
-  <select id="post-type">
-    <option value="profile">Profile Post</option>
-    <option value="public">Public Chat</option>
-  </select>
   <textarea id="post-content" placeholder="Have something to say?"></textarea>
   <button type="submit" id="submit-post">Post</button>
 </form>
@@ -97,14 +82,13 @@ const feed=document.getElementById('feed');
 const form=document.getElementById('post-form');
 const textarea=document.getElementById('post-content');
 const usernameInput=document.getElementById('username');
-const postTypeSelect=document.getElementById('post-type');
 const profileBtn=document.getElementById('profile-btn');
 const dmBtn=document.getElementById('dm-btn');
 const dmDot=document.getElementById('dm-dot');
 
-let currentFilter='friends';
+let currentFilter='public'; // Default filter
 let friendIds=new Set();
-let lastSeenMap={}; // Track last seen timestamps
+let lastSeenMap={};
 
 if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
@@ -123,7 +107,7 @@ function formatTimestamp(date){
   return `${diffDays} days ago`;
 }
 
-// Header buttons
+// Filter buttons
 buttons.forEach(btn=>{
   btn.addEventListener('click',()=>{
     buttons.forEach(b=>b.classList.remove('active'));
@@ -132,11 +116,10 @@ buttons.forEach(btn=>{
     renderFeed();
   });
 });
+
+// Profile & DM buttons
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
-dmBtn.addEventListener('click',()=>{ 
-  markDMsAsSeen(); 
-  window.location.href='messages.html'; 
-});
+dmBtn.addEventListener('click',()=>{ window.location.href='messages.html'; });
 
 // Fetch friends
 function subscribeFriends(){
@@ -147,7 +130,6 @@ function subscribeFriends(){
     db.collection('users').doc(currentUserID).get().then(doc=>{
       if(doc.exists && doc.data().lastSeen) lastSeenMap=doc.data().lastSeen;
       fetchPosts();
-      checkNewDMs(); // Check for new DMs
     });
   });
 }
@@ -188,11 +170,11 @@ function renderFeed(){
     article.dataset.author=authorId;
     let show=true;
     if(currentFilter==='public') show=(p.type==='public');
-    else if(currentFilter==='friends') show=friendIds.has(authorId);
+    else if(currentFilter==='friends') show=(p.type==='profile' && friendIds.has(authorId));
     else if(currentFilter==='unseen'){
       const lastSeen=lastSeenMap[authorId]||0;
       const postTime=post.timestamp?post.timestamp.toDate().getTime():0;
-      show=(post.type==='profile' && postTime>lastSeen);
+      show=(p.type==='profile' && postTime>lastSeen);
     }
     article.style.display=show?'flex':'none';
     article.innerHTML=`
@@ -215,13 +197,21 @@ form.addEventListener('submit', async e=>{
   if(!content) return alert('Write something!');
   const newUsername=usernameInput.value.trim()||'friend_alpha';
   localStorage.setItem('username',newUsername);
-  const type=postTypeSelect.value;
+  const userRef=db.collection('users').doc(currentUserID);
+  const userDoc=await userRef.get();
+  const existing=userDoc.exists?userDoc.data():{};
+  await userRef.set({username:newUsername, avatarURL:existing.avatarURL||'https://via.placeholder.com/40'},{merge:true});
+  
   try{
-    const userRef=db.collection('users').doc(currentUserID);
-    const userDoc=await userRef.get();
-    const existing=userDoc.exists?userDoc.data():{};
-    await userRef.set({username:newUsername, avatarURL:existing.avatarURL||'https://via.placeholder.com/40'},{merge:true});
-    if(type==='profile'){
+    if(currentFilter==='public'){
+      await db.collection('publicPosts').add({
+        authorId:currentUserID,
+        content:sanitizeText(content),
+        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
+        type:'public',
+        key:SECRET_KEY
+      });
+    } else {
       await db.collection('users').doc(currentUserID).collection('profilePosts').add({
         authorId:currentUserID,
         content:sanitizeText(content),
@@ -231,63 +221,11 @@ form.addEventListener('submit', async e=>{
       });
       lastSeenMap[currentUserID]=Date.now();
       await userRef.set({lastSeen:lastSeenMap},{merge:true});
-    } else {
-      await db.collection('publicPosts').add({
-        authorId:currentUserID,
-        content:sanitizeText(content),
-        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
-        type:'public',
-        key:SECRET_KEY
-      });
     }
     textarea.value='';
     fetchPosts();
   }catch(err){alert('Error posting: '+err.message);}
 });
-
-// ------------------- NEW DM RED DOT -------------------
-function checkNewDMs(){
-  db.collection('users').doc(currentUserID).collection('dms').onSnapshot(dmSnap=>{
-    let hasNew=false;
-    dmSnap.forEach(friendDoc=>{
-      const friendID = friendDoc.id;
-      db.collection('users').doc(currentUserID)
-        .collection('dms').doc(friendID)
-        .collection('messages')
-        .orderBy('timestamp','desc')
-        .limit(1)
-        .get()
-        .then(msgSnap=>{
-          if(!msgSnap.empty){
-            const msg = msgSnap.docs[0].data();
-            const lastChecked = parseInt(localStorage.getItem('lastCheckedDM_' + friendID)) || 0;
-            if(msg.senderID!==currentUserID && msg.timestamp?.toMillis() > lastChecked){
-              hasNew = true;
-              dmDot.style.display='block';
-            }
-          }
-        });
-    });
-    if(!hasNew) dmDot.style.display='none';
-  });
-}
-
-function markDMsAsSeen(){
-  db.collection('users').doc(currentUserID).collection('dms').get().then(snap=>{
-    snap.forEach(doc=>{
-      db.collection('users').doc(currentUserID).collection('dms').doc(doc.id)
-        .collection('messages').orderBy('timestamp','desc').limit(1)
-        .get().then(msgSnap=>{
-          if(!msgSnap.empty){
-            const ts = msgSnap.docs[0].data().timestamp?.toMillis() || Date.now();
-            localStorage.setItem('lastCheckedDM_' + doc.id, ts);
-          }
-        });
-    });
-  });
-  dmDot.style.display='none';
-}
-checkNewDMs();
 </script>
 </body>
 </html>
