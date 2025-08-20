@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>The Blog Network</title>
 <style>
-/* (same CSS as before, unchanged) */
 body { margin:0; font-family:Arial,sans-serif; background:#f0f4ff url('https://www.transparenttextures.com/patterns/tileable-wood-print.png') repeat; color:#000080; user-select:none; }
 header { background:linear-gradient(90deg,#3399ff,#9966ff); padding:20px 30px; box-shadow:0 3px 6px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; position:relative; }
 .logo-container { display:flex; align-items:center; gap:15px; }
@@ -89,10 +88,11 @@ const dmDot=document.getElementById('dm-dot');
 let currentFilter='public';
 let friendIds=new Set();
 let lastSeenMap={};
+const userCache={};
 
 if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
-function sanitizeText(text){return text;}
+function sanitizeText(text){ return text; }
 function formatTimestamp(date){
   const now=new Date(); const diffMs=now-date;
   const diffMins=Math.floor(diffMs/60000);
@@ -134,40 +134,34 @@ function subscribeFriends(){
 }
 subscribeFriends();
 
-// Posts
-let cachedPosts=[];
-const userCache={};
-
-async function fetchMissingUsers(authorIds){
-  const missing=authorIds.filter(id=>!userCache[id]);
-  if(!missing.length) return;
-  const chunks=[];
-  while(missing.length) chunks.push(missing.splice(0,10));
-  await Promise.all(chunks.map(list=>{
-    return db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',list)
-      .get()
-      .then(s=>s.forEach(u=>userCache[u.id]=u.data()||{}));
-  }));
+// Fetch user data if not cached
+async function getUserData(userId){
+  if(userCache[userId]) return userCache[userId];
+  const doc = await db.collection('users').doc(userId).get();
+  const data = doc.exists ? doc.data() : {username:'Unknown', avatarURL:'https://via.placeholder.com/40'};
+  userCache[userId] = data;
+  return data;
 }
 
+// Fetch posts
+let cachedPosts=[];
 async function fetchPosts(){
-  const postsPromises = [...friendIds].map(uid=>db.collection('users').doc(uid).collection('profilePosts').orderBy('timestamp','desc').get());
-  const profileSnaps = await Promise.all(postsPromises);
+  const profilePromises = [...friendIds].map(uid => db.collection('users').doc(uid).collection('profilePosts').orderBy('timestamp','desc').get());
+  const profileSnaps = await Promise.all(profilePromises);
   const profilePosts = profileSnaps.flatMap(snap => snap.docs.map(d=>({id:d.id,data:d.data(), type:'profile'})));
   const publicSnap = await db.collection('publicPosts').orderBy('timestamp','desc').get();
   const publicPosts = publicSnap.docs.map(d=>({id:d.id,data:d.data(), type:'public'}));
   cachedPosts = [...profilePosts, ...publicPosts];
-  const authors=[...new Set(cachedPosts.map(p=>p.data.authorId).filter(Boolean))];
-  await fetchMissingUsers(authors);
   renderFeed();
 }
 
-function renderFeed(){
+// Render feed
+async function renderFeed(){
   feed.innerHTML='';
-  cachedPosts.forEach(p=>{
+  for(const p of cachedPosts){
     const post=p.data;
-    const authorId=post.authorId || "unknown_user"; // ✅ FIXED (no more hijacking as currentUserID)
-    const userData=userCache[authorId]||{username:'Unknown', avatarURL:'https://via.placeholder.com/40'};
+    const authorId=post.authorId;
+    const userData = await getUserData(authorId);
     const article=document.createElement('article');
     article.className='post';
     article.dataset.type=p.type;
@@ -193,7 +187,7 @@ function renderFeed(){
     `;
     feed.appendChild(article);
     article.querySelectorAll('.profile-link').forEach(img=>img.addEventListener('click',()=>window.location.href=`profile.html?user=${encodeURIComponent(authorId)}`));
-  });
+  }
 }
 
 // Posting
@@ -205,9 +199,9 @@ form.addEventListener('submit', async e=>{
   localStorage.setItem('username',newUsername);
   const userRef=db.collection('users').doc(currentUserID);
   const userDoc=await userRef.get();
-  const existing=userDoc.exists?userDoc.data():{};
+  const existing=userDoc.exists ? userDoc.data() : {};
   await userRef.set({username:newUsername, avatarURL:existing.avatarURL||'https://via.placeholder.com/40'},{merge:true});
-  
+
   try{
     if(currentFilter==='public'){
       await db.collection('publicPosts').add({
@@ -230,7 +224,7 @@ form.addEventListener('submit', async e=>{
     }
     textarea.value='';
     fetchPosts();
-  }catch(err){alert('Error posting: '+err.message);}
+  }catch(err){ alert('Error posting: '+err.message); }
 });
 </script>
 </body>
