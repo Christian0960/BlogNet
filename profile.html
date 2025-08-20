@@ -29,6 +29,7 @@
   .notif-item { padding:6px 10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-size:13px; }
   .notif-item button { margin-left:5px; background:#3399ff; border:none; color:white; padding:2px 6px; border-radius:3px; cursor:pointer; font-size:12px; }
   .notif-item button:hover { background:#2277cc; }
+  #song-player { margin:10px 0; }
 </style>
 </head>
 <body>
@@ -59,8 +60,9 @@
   <label for="movie-input">Favorite Movie:</label>
   <input type="text" id="movie-input" placeholder="Optional">
 
-  <label for="song-input">Favorite Song:</label>
-  <input type="text" id="song-input" placeholder="Optional">
+  <label for="song-input">Favorite Song (MP3 URL):</label>
+  <input type="url" id="song-input" placeholder="Paste MP3 link">
+  <div id="song-player"></div>
 
   <label for="birthday-input">Birthday:</label>
   <input type="date" id="birthday-input">
@@ -108,7 +110,6 @@ if(!currentUserID) { currentUserID='user_'+Date.now()+'_'+Math.floor(Math.random
 const urlParams = new URLSearchParams(window.location.search);
 const profileUserID = urlParams.get('user')||currentUserID;
 const isOwnProfile = profileUserID===currentUserID;
-const CREATOR_ID = "user_1755141089023"; // Big boss man
 
 // Elements
 const usernameInput=document.getElementById('username-input');
@@ -128,6 +129,7 @@ const friendsContainer=document.getElementById('friends-container');
 const friendActions=document.getElementById('friend-actions');
 const newPostContainer=document.getElementById('new-post-container');
 const friendRequestsContainer=document.getElementById('friend-requests-container');
+const songPlayer=document.getElementById('song-player');
 
 function formatTimestamp(date){
   const now=new Date(); const diffMs=now-date; const diffMins=Math.floor(diffMs/60000);
@@ -151,18 +153,14 @@ async function loadProfile(){
     avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
     main.style.background=wallpaperSelect.value;
 
-    // Easter egg: add Gold wallpaper if friends with CREATOR_ID
-    if(isOwnProfile){
-      const friendsSnap = await db.collection('users').doc(currentUserID).collection('friends').doc(CREATOR_ID).get();
-      if(friendsSnap.exists){
-        let goldExists = Array.from(wallpaperSelect.options).some(opt=>opt.value==='gold');
-        if(!goldExists){
-          const goldOption = document.createElement('option');
-          goldOption.value='gold';
-          goldOption.textContent='Gold (Secret)';
-          wallpaperSelect.appendChild(goldOption);
-        }
-      }
+    // Show audio player if song exists
+    songPlayer.innerHTML='';
+    if(data.favoriteSong){
+      const audio=document.createElement('audio');
+      audio.controls=true;
+      audio.src=data.favoriteSong;
+      audio.style.width='100%';
+      songPlayer.appendChild(audio);
     }
 
     if(!isOwnProfile){
@@ -186,79 +184,17 @@ saveBtn.addEventListener('click',async()=>{
     const isTaken=!usernameCheck.empty&&!(usernameCheck.docs.length===1&&usernameCheck.docs[0].id===currentUserID);
     if(isTaken) return alert('Username already taken!');
     const profileData={username,bio:bioInput.value.trim(),favoriteMovie:movieInput.value.trim(),favoriteSong:songInput.value.trim(),birthday:birthdayInput.value,avatarURL:avatarInput.value.trim(),wallpaper:wallpaperSelect.value};
-    Object.keys(profileData).forEach(key=>localStorage.setItem(key,profileData[key]));
     await db.collection('users').doc(currentUserID).set(profileData,{merge:true});
     alert('Profile updated!');
     avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
     main.style.background=wallpaperSelect.value;
+    loadProfile();
   }catch(err){alert('Error saving profile: '+err.message);}
 });
 
 // Avatar & wallpaper preview
 avatarInput.addEventListener('input',()=>avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150');
 wallpaperSelect.addEventListener('change',()=>main.style.background=wallpaperSelect.value);
-
-// Friends
-async function loadFriends(){
-  friendsContainer.innerHTML='';
-  const snapshot=await db.collection('users').doc(profileUserID).collection('friends').get();
-  if(snapshot.empty){ friendsContainer.innerHTML='<p>No friends yet.</p>'; return;}
-  snapshot.forEach(doc=>{const friend=doc.data(); const p=document.createElement('p'); p.innerHTML=friend.username?`<a href="profile.html?user=${encodeURIComponent(doc.id)}">${friend.username}</a>`:'Unknown'; friendsContainer.appendChild(p);});
-}
-
-// Friend requests
-async function loadFriendRequests(){
-  if(!isOwnProfile) return;
-  friendRequestsContainer.innerHTML='';
-  const snapshot=await db.collection('users').doc(currentUserID).collection('friendRequests').get();
-  if(snapshot.empty){ friendRequestsContainer.innerHTML='<p>No friend requests.</p>'; return;}
-  snapshot.forEach(async doc=>{
-    const senderDoc=await db.collection('users').doc(doc.id).get();
-    const senderUsername=senderDoc.exists&&senderDoc.data().username?senderDoc.data().username:'Unknown';
-    const div=document.createElement('div'); div.className='notif-item';
-    div.innerHTML=`<span>📩 ${senderUsername} sent a friend request</span>`;
-    const acceptBtn=document.createElement('button'); acceptBtn.textContent='Accept';
-    acceptBtn.onclick=async()=>{try{
-      await db.collection('users').doc(currentUserID).collection('friends').doc(doc.id).set({username:senderUsername});
-      await db.collection('users').doc(doc.id).collection('friends').doc(currentUserID).set({username:usernameInput.value});
-      await db.collection('users').doc(currentUserID).collection('friendRequests').doc(doc.id).delete();
-      loadFriends(); loadFriendRequests();
-    }catch(err){alert('Error accepting: '+err.message);}};
-    const rejectBtn=document.createElement('button'); rejectBtn.textContent='Reject';
-    rejectBtn.onclick=async()=>{try{await db.collection('users').doc(currentUserID).collection('friendRequests').doc(doc.id).delete(); loadFriendRequests();}catch(err){alert('Error rejecting: '+err.message);}};
-    div.appendChild(acceptBtn); div.appendChild(rejectBtn); friendRequestsContainer.appendChild(div);
-  });
-}
-
-// Setup friend actions
-async function setupFriendActions(){
-  friendActions.innerHTML=''; if(isOwnProfile) return;
-  const friendDoc=await db.collection('users').doc(currentUserID).collection('friends').doc(profileUserID).get();
-  if(friendDoc.exists){ friendActions.innerHTML='<p>✅ You are friends</p>'; return;}
-  const pending=await db.collection('users').doc(profileUserID).collection('friendRequests').doc(currentUserID).get();
-  if(pending.exists){ friendActions.innerHTML='<p>📩 Friend request sent</p>'; return;}
-  const btn=document.createElement('button'); btn.textContent='➕ Add Friend';
-  btn.addEventListener('click',async()=>{try{
-    await db.collection('users').doc(profileUserID).collection('friendRequests').doc(currentUserID).set({}); 
-    alert('Friend request sent!'); 
-    setupFriendActions();
-  }catch(err){alert('Error: '+err.message);}});
-  friendActions.appendChild(btn);
-}
-
-// Blog posts
-async function loadBlogPosts(){
-  blogPostsContainer.innerHTML='';
-  const snapshot=await db.collection('users').doc(profileUserID).collection('profilePosts').orderBy('timestamp','desc').get();
-  snapshot.forEach(doc=>{const post=doc.data(); const postDiv=document.createElement('div'); postDiv.className='blog-post'; postDiv.innerHTML=`<div class="timestamp">${post.timestamp?formatTimestamp(post.timestamp.toDate()):''}</div><div class="content">${post.content}</div>`; blogPostsContainer.appendChild(postDiv);});
-}
-
-// Submit blog post
-submitPostBtn.addEventListener('click',async()=>{
-  const content=newPostInput.value.trim(); if(!content) return alert('Post cannot be empty.');
-  const postData={content,timestamp:firebase.firestore.FieldValue.serverTimestamp()};
-  try{await db.collection('users').doc(currentUserID).collection('profilePosts').add(postData); newPostInput.value=''; loadBlogPosts();}catch(err){alert('Error posting blog: '+err.message);}
-});
 
 // Back button
 document.getElementById('back-btn').addEventListener('click',()=>window.location.href='index.html');
