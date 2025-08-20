@@ -231,6 +231,8 @@ submitPostBtn.addEventListener('click',async()=>{
   if(!content) return alert('Post cannot be empty.');
   try{
     await db.collection('users').doc(currentUserID).collection('blogPosts').add({content,timestamp:firebase.firestore.FieldValue.serverTimestamp()});
+    key: "MY_SECRET_KEY"
+  });
     newPostInput.value='';
     loadBlogPosts();
   }catch(err){alert('Error posting blog: '+err.message);}
@@ -241,3 +243,4 @@ loadProfile();
 </script>
 </body>
 </html>
+
