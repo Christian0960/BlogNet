@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>The Blog Network</title>
 <style>
+/* (same CSS as before, unchanged) */
 body { margin:0; font-family:Arial,sans-serif; background:#f0f4ff url('https://www.transparenttextures.com/patterns/tileable-wood-print.png') repeat; color:#000080; user-select:none; }
 header { background:linear-gradient(90deg,#3399ff,#9966ff); padding:20px 30px; box-shadow:0 3px 6px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; position:relative; }
 .logo-container { display:flex; align-items:center; gap:15px; }
@@ -76,7 +77,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// DOM Elements
 const buttons=document.querySelectorAll('.filter-btn');
 const feed=document.getElementById('feed');
 const form=document.getElementById('post-form');
@@ -117,11 +117,10 @@ buttons.forEach(btn=>{
   });
 });
 
-// Profile & DM buttons
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
 dmBtn.addEventListener('click',()=>{ window.location.href='messages.html'; });
 
-// Fetch friends
+// Friends subscription
 function subscribeFriends(){
   db.collection('users').doc(currentUserID).collection('friends').onSnapshot(snap=>{
     friendIds=new Set();
@@ -167,7 +166,7 @@ function renderFeed(){
   feed.innerHTML='';
   cachedPosts.forEach(p=>{
     const post=p.data;
-    const authorId=post.authorId || currentUserID; // Fallback only to the actual current user
+    const authorId=post.authorId || "unknown_user"; // ✅ FIXED (no more hijacking as currentUserID)
     const userData=userCache[authorId]||{username:'Unknown', avatarURL:'https://via.placeholder.com/40'};
     const article=document.createElement('article');
     article.className='post';
