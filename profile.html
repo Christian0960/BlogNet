@@ -273,8 +273,7 @@ submitPostBtn.addEventListener('click', async () => {
   const content = newPostInput.value.trim();
   if (!content) return alert('Cannot post empty content.');
   try {
-    const userDoc = await db.collection('users').doc(currentUserID).get();
-    const username = userDoc.exists ? userDoc.data().username : "Anonymous";
+    const username = localStorage.getItem('username') || 'Anonymous';
 
     await db.collection('users').doc(currentUserID)
       .collection('profilePosts').add({
@@ -400,3 +399,4 @@ loadProfile();
 </script>
 </body>
 </html>
+
