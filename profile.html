@@ -19,15 +19,15 @@
   input[type="text"], input[type="url"], input[type="date"], textarea, select { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; }
   textarea { resize:vertical; min-height:60px; }
   #friends-container p, #blog-posts-container p, #friend-requests-container p { margin:4px 0; }
-  #friends-container a { color:#3399ff; text-decoration:none; }
+  #friends-container a { color:#3399ff; text-decoration:none; display:flex; align-items:center; gap:5px; }
   #friends-container a:hover { text-decoration:underline; }
-  #avatar-username-container { display:flex; align-items:center; gap:15px; margin-bottom:15px; flex-direction:column; }
+  #avatar-username-container { display:flex; align-items:center; gap:15px; margin-bottom:15px; flex-wrap:wrap; }
   #profile-avatar img { width:150px; height:150px; border-radius:50%; object-fit:cover; background:#ccc; }
-  #username-input { font-size:20px; text-align:center; }
-  #dm-btn-profile { margin-top:10px; background:#3399ff; color:white; padding:6px 10px; border-radius:4px; border:none; cursor:pointer; font-weight:bold; }
-  #dm-btn-profile:hover { background:#2277cc; }
+  #username-input { flex:1; font-size:20px; }
+  .start-dm-btn { margin-top:10px; padding:6px 10px; font-size:14px; background:#00cc66; color:white; border:none; border-radius:4px; cursor:pointer; }
+  .start-dm-btn:hover { background:#00ff88; }
   .blog-post { border:2px inset #99ccff; background:#e6f0ff; padding:10px; margin-bottom:10px; border-radius:4px; font-size:13px; font-family:'Courier New', monospace; }
-  .blog-post .timestamp { font-size:11px; color:#333; margin-bottom:5px; }
+  .blog-post .timestamp { font-size:11px; color:#333; margin-bottom:5px; display:flex; align-items:center; gap:5px; }
   #new-post-container { margin-bottom:20px; }
   #new-post-input { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; resize:vertical; min-height:60px; margin-bottom:8px; }
   .notif-item { padding:6px 10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-size:13px; }
@@ -54,11 +54,13 @@
 
   <div id="avatar-username-container">
     <div id="profile-avatar">
-      <img id="avatar-preview" src="https://via.placeholder.com/150" alt="Avatar">
+      <img id="avatar-preview" src="https://preview.redd.it/made-a-frutiger-aero-default-pfp-v0-techv3ww70eb1.png?auto=webp&s=cef6cc3645c0fff280d25325f3b0a00c51038167" alt="Avatar">
     </div>
     <input type="text" id="username-input" placeholder="Username">
-    <!-- DM Button will be inserted here -->
   </div>
+
+  <!-- DM button -->
+  <div id="dm-button-container"></div>
 
   <label for="bio-input">Bio:</label>
   <textarea id="bio-input"></textarea>
@@ -117,6 +119,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const SECRET_KEY = "MY_SECRET_KEY";
+const DEFAULT_PFP = 'https://preview.redd.it/made-a-frutiger-aero-default-pfp-v0-techv3ww70eb1.png?auto=webp&s=cef6cc3645c0fff280d25325f3b0a00c51038167';
 
 let currentUserID = localStorage.getItem('userId');
 if (!currentUserID) {
@@ -145,7 +148,7 @@ const friendRequestsContainer=document.getElementById('friend-requests-container
 const friendActions=document.getElementById('friend-actions');
 const songPlayer=document.getElementById('song-player');
 const newPostContainer=document.getElementById('new-post-container');
-const avatarUsernameContainer = document.getElementById('avatar-username-container');
+const dmButtonContainer = document.getElementById('dm-button-container');
 
 function formatTimestamp(date){
   const now=new Date(); 
@@ -187,7 +190,7 @@ async function loadProfile(){
     birthdayInput.value=data.birthday||'';
     avatarInput.value=data.avatarURL||'';
     wallpaperSelect.value=data.wallpaper||'#f0f4ff';
-    avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
+    avatarPreview.src = avatarInput.value?.trim() || DEFAULT_PFP;
     main.style.background=wallpaperSelect.value;
 
     songPlayer.innerHTML='';
@@ -205,13 +208,19 @@ async function loadProfile(){
     if(!isOwnProfile){
       [usernameInput,bioInput,movieInput,songInput,birthdayInput,avatarInput,wallpaperSelect,saveBtn,newPostInput,submitPostBtn].forEach(el=>el.disabled=true);
       saveBtn.style.display='none'; submitPostBtn.style.display='none'; newPostContainer.style.display='none';
+
+      // Add DM button
+      const dmBtn = document.createElement('button');
+      dmBtn.textContent = "Start a conversation!💬";
+      dmBtn.className = "start-dm-btn";
+      dmBtn.addEventListener('click', ()=>{ window.location.href='dm.html?user=' + profileUserID; });
+      dmButtonContainer.appendChild(dmBtn);
     }
 
     loadBlogPosts();
     loadFriends();
     loadFriendActions();
     loadFriendRequests();
-    addDMButton();
   }catch(err){console.error('Error loading profile:',err);}
 }
 
@@ -235,9 +244,11 @@ saveBtn.addEventListener('click',async()=>{
     };
 
     await db.collection('users').doc(currentUserID).set(profileData,{merge:true});
+
     usernameInput.value = profileData.username;
-    avatarPreview.src = profileData.avatarURL || 'https://via.placeholder.com/150';
+    avatarPreview.src = profileData.avatarURL?.trim() || DEFAULT_PFP;
     main.style.background = profileData.wallpaper;
+
     alert('Profile updated!');
   }catch(err){alert('Error saving profile: '+err.message);}
 });
@@ -255,8 +266,10 @@ function loadBlogPosts(){
         const data=doc.data();
         const postDiv=document.createElement('div');
         postDiv.className='blog-post';
+        const pfp = data.avatarURL?.trim() || DEFAULT_PFP;
         postDiv.innerHTML = `
           <div class="timestamp">
+            <img src="${pfp}" alt="pfp" style="width:25px;height:25px;border-radius:50%;vertical-align:middle;">
             ${data.username ? `<strong>${data.username}</strong> - ` : ''}
             ${data.timestamp?.toDate ? formatTimestamp(data.timestamp.toDate()) : ''}
           </div>
@@ -275,11 +288,13 @@ submitPostBtn.addEventListener('click', async () => {
   if (!content) return alert('Cannot post empty content.');
   try {
     const username = localStorage.getItem('username') || 'Anonymous';
+    const avatarURL = avatarInput.value?.trim() || DEFAULT_PFP;
 
     await db.collection('users').doc(currentUserID)
       .collection('profilePosts').add({
         content: content,
         username: username,
+        avatarURL: avatarURL,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         key: SECRET_KEY
       });
@@ -299,118 +314,69 @@ async function loadFriends(){
   snapshot.forEach(doc=>{
     const friend = doc.data();
     const a = document.createElement('a');
+    const fpfp = friend.avatarURL?.trim() || DEFAULT_PFP;
+    a.innerHTML = `<img src="${fpfp}" alt="pfp" style="width:25px;height:25px;border-radius:50%;"> ${friend.username || doc.id}`;
     a.href = '?user=' + doc.id;
-    a.textContent = friend.username || doc.id;
-    a.style.display='block';
     friendsContainer.appendChild(a);
   });
 }
 
 // Friend actions
 async function loadFriendActions(){
-  friendActions.innerHTML='';
-  if(isOwnProfile) return;
-
-  const friendDoc = await db.collection('users').doc(currentUserID)
-    .collection('friends').doc(profileUserID).get();
-  if(friendDoc.exists){
-    const span=document.createElement('span');
-    span.textContent='You are friends ✅';
-    friendActions.appendChild(span);
-    return;
+  if(isOwnProfile){
+    friendActions.innerHTML = '';
+    const allUsersSnapshot = await db.collection('users').get();
+    allUsersSnapshot.forEach(doc=>{
+      if(doc.id === currentUserID) return;
+      const btn = document.createElement('button');
+      btn.textContent = 'Send Friend Request to ' + (doc.data().username || doc.id);
+      btn.addEventListener('click', async ()=>{
+        await db.collection('users').doc(doc.id).collection('friendRequests').doc(currentUserID).set({
+          from: currentUserID,
+          username: usernameInput.value || 'Anonymous'
+        });
+        alert('Friend request sent!');
+      });
+      friendActions.appendChild(btn);
+    });
   }
-
-  const reqDoc = await db.collection('users').doc(profileUserID)
-    .collection('friendRequests').doc(currentUserID).get();
-  if(reqDoc.exists){
-    const span=document.createElement('span');
-    span.textContent='Request Sent!';
-    friendActions.appendChild(span);
-    return;
-  }
-
-  const addBtn=document.createElement('button');
-  addBtn.textContent='Add Friend';
-  addBtn.addEventListener('click', async ()=>{
-    try{
-      const userDoc = await db.collection('users').doc(currentUserID).get();
-      const username = userDoc.exists ? userDoc.data().username : 'Anonymous';
-      await db.collection('users').doc(profileUserID)
-        .collection('friendRequests').doc(currentUserID)
-        .set({ fromUsername: username, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-      friendActions.innerHTML='Request Sent!';
-    }catch(err){ alert('Error sending request: '+err.message); }
-  });
-  friendActions.appendChild(addBtn);
-}
-
-// DM button
-async function addDMButton(){
-  if(isOwnProfile) return;
-
-  const friendDoc = await db.collection('users').doc(currentUserID)
-    .collection('friends').doc(profileUserID).get();
-  if(!friendDoc.exists) return;
-
-  const existingBtn = document.getElementById('dm-btn-profile');
-  if(existingBtn) existingBtn.remove();
-
-  const dmBtn = document.createElement('button');
-  dmBtn.id='dm-btn-profile';
-  dmBtn.textContent='Start a conversation!💬';
-  dmBtn.addEventListener('click', ()=> {
-    window.location.href = `messages.html?user=${encodeURIComponent(profileUserID)}`;
-  });
-  avatarUsernameContainer.appendChild(dmBtn);
 }
 
 // Friend requests
-function loadFriendRequests(){
-  friendRequestsContainer.innerHTML='Loading friend requests...';
+async function loadFriendRequests(){
+  friendRequestsContainer.innerHTML = '';
   if(!isOwnProfile) return;
-  db.collection('users').doc(currentUserID)
-    .collection('friendRequests')
-    .onSnapshot(snapshot=>{
-      friendRequestsContainer.innerHTML='';
-      if(snapshot.empty){ friendRequestsContainer.innerHTML='<p>No requests.</p>'; return; }
-      snapshot.forEach(doc=>{
-        const req=doc.data();
-        const container=document.createElement('div');
-        container.className='notif-item';
-        const span=document.createElement('span');
-        span.textContent=`${req.fromUsername || 'Unknown'} wants to be friends`;
-
-        const acceptBtn=document.createElement('button');
-        acceptBtn.textContent='Accept';
-        acceptBtn.addEventListener('click', async ()=>{
-          const fromUserId = doc.id;
-          try{
-            const fromUserDoc = await db.collection('users').doc(fromUserId).get();
-            const fromUsername = fromUserDoc.exists ? fromUserDoc.data().username : 'Unknown';
-
-            await db.collection('users').doc(currentUserID).collection('friends').doc(fromUserId).set({ username: fromUsername });
-            await db.collection('users').doc(fromUserId).collection('friends').doc(currentUserID).set({ username: usernameInput.value });
-
-            await db.collection('users').doc(currentUserID).collection('friendRequests').doc(fromUserId).delete();
-          }catch(err){ alert('Error adding friend: '+err.message); }
-        });
-
-        const declineBtn=document.createElement('button');
-        declineBtn.textContent='Decline';
-        declineBtn.addEventListener('click', async ()=>{
-          await db.collection('users').doc(currentUserID).collection('friendRequests').doc(doc.id).delete();
-        });
-
-        container.appendChild(span);
-        container.appendChild(acceptBtn);
-        container.appendChild(declineBtn);
-        friendRequestsContainer.appendChild(container);
-      });
+  const reqSnapshot = await db.collection('users').doc(currentUserID)
+    .collection('friendRequests').get();
+  if(reqSnapshot.empty){ friendRequestsContainer.innerHTML='<p>No friend requests.</p>'; return; }
+  reqSnapshot.forEach(doc=>{
+    const data = doc.data();
+    const div = document.createElement('div');
+    div.className = 'notif-item';
+    div.textContent = data.username || doc.id;
+    const acceptBtn = document.createElement('button');
+    acceptBtn.textContent = 'Accept';
+    acceptBtn.addEventListener('click', async ()=>{
+      await db.collection('users').doc(currentUserID).collection('friends').doc(doc.id).set({username:data.username, avatarURL: data.avatarURL || DEFAULT_PFP});
+      await db.collection('users').doc(doc.id).collection('friends').doc(currentUserID).set({username: usernameInput.value || 'Anonymous', avatarURL: avatarInput.value?.trim() || DEFAULT_PFP});
+      await doc.ref.delete();
+      loadFriends();
+      loadFriendRequests();
     });
+    const rejectBtn = document.createElement('button');
+    rejectBtn.textContent = 'Reject';
+    rejectBtn.addEventListener('click', async ()=>{
+      await doc.ref.delete();
+      loadFriendRequests();
+    });
+    div.appendChild(acceptBtn);
+    div.appendChild(rejectBtn);
+    friendRequestsContainer.appendChild(div);
+  });
 }
 
 // Avatar & wallpaper preview
-avatarInput.addEventListener('input',()=>avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150');
+avatarInput.addEventListener('input',()=>avatarPreview.src = avatarInput.value?.trim() || DEFAULT_PFP);
 wallpaperSelect.addEventListener('change',()=>main.style.background=wallpaperSelect.value);
 
 // Back button
