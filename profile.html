@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Your Profile</title>
+<title>The Profile</title>
 <style>
   body { margin:0; font-family:Arial,sans-serif; color:#000080; user-select:none; background:#f0f4ff; }
   header { background:linear-gradient(90deg,#3399ff,#9966ff); padding:20px 30px; box-shadow:0 3px 6px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
@@ -115,11 +115,22 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const SECRET_KEY = "MY_SECRET_KEY";
 
+// ===== Bulletproof User ID Initialization =====
 let currentUserID = localStorage.getItem('userId');
-if (!currentUserID) {
-  currentUserID = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  localStorage.setItem('userId', currentUserID);
+async function initUserID() {
+  if(!currentUserID){
+    currentUserID = 'user_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+    localStorage.setItem('userId', currentUserID);
+    await db.collection('users').doc(currentUserID).set({
+      username:'Unknown',
+      avatarURL:'https://via.placeholder.com/40',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
+  }
 }
+initUserID();
+// ===========================================
+
 const urlParams = new URLSearchParams(window.location.search);
 const profileUserID = urlParams.get('user') || currentUserID;
 const isOwnProfile = profileUserID === currentUserID;
@@ -143,6 +154,7 @@ const friendActions=document.getElementById('friend-actions');
 const songPlayer=document.getElementById('song-player');
 const newPostContainer=document.getElementById('new-post-container');
 
+// ===== Functions =====
 function formatTimestamp(date){
   const now=new Date(); 
   const diffMs=now-date; 
@@ -171,7 +183,7 @@ function getYouTubeEmbedURL(url){
   return null;
 }
 
-// Load profile
+// ===== Load Profile =====
 async function loadProfile(){
   try{
     const doc=await db.collection('users').doc(profileUserID).get();
@@ -210,7 +222,7 @@ async function loadProfile(){
   }catch(err){console.error('Error loading profile:',err);}
 }
 
-// Save profile
+// ===== Save Profile =====
 saveBtn.addEventListener('click',async()=>{
   const username=usernameInput.value.trim();
   if(!username) return alert('Username cannot be empty.');
@@ -229,10 +241,8 @@ saveBtn.addEventListener('click',async()=>{
       wallpaper:wallpaperSelect.value
     };
 
-    // Save to Firestore
     await db.collection('users').doc(currentUserID).set(profileData,{merge:true});
 
-    // Update UI immediately (fixes reverting username)
     usernameInput.value = profileData.username;
     avatarPreview.src = profileData.avatarURL || 'https://via.placeholder.com/150';
     main.style.background = profileData.wallpaper;
@@ -241,7 +251,7 @@ saveBtn.addEventListener('click',async()=>{
   }catch(err){alert('Error saving profile: '+err.message);}
 });
 
-// Blog posts
+// ===== Blog Posts =====
 function loadBlogPosts(){
   blogPostsContainer.innerHTML='Loading posts...';
   db.collection('users').doc(profileUserID)
@@ -274,7 +284,6 @@ submitPostBtn.addEventListener('click', async () => {
   if (!content) return alert('Cannot post empty content.');
   try {
     const username = localStorage.getItem('username') || 'Anonymous';
-
     await db.collection('users').doc(currentUserID)
       .collection('profilePosts').add({
         content: content,
@@ -288,7 +297,7 @@ submitPostBtn.addEventListener('click', async () => {
   }
 });
 
-// Friends
+// ===== Friends =====
 async function loadFriends(){
   friendsContainer.innerHTML = 'Loading friends...';
   const snapshot = await db.collection('users').doc(profileUserID)
@@ -305,7 +314,7 @@ async function loadFriends(){
   });
 }
 
-// Friend actions
+// ===== Friend Actions =====
 async function loadFriendActions(){
   friendActions.innerHTML='';
   if(isOwnProfile) return;
@@ -343,7 +352,7 @@ async function loadFriendActions(){
   friendActions.appendChild(addBtn);
 }
 
-// Friend requests
+// ===== Friend Requests =====
 function loadFriendRequests(){
   friendRequestsContainer.innerHTML='Loading friend requests...';
   if(!isOwnProfile) return;
@@ -388,15 +397,11 @@ function loadFriendRequests(){
     });
 }
 
-// Avatar & wallpaper preview
+// ===== Avatar & Wallpaper Preview =====
 avatarInput.addEventListener('input',()=>avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150');
 wallpaperSelect.addEventListener('change',()=>main.style.background=wallpaperSelect.value);
-
-// Back button
-document.getElementById('back-btn').addEventListener('click',()=>window.location.href='index.html');
 
 loadProfile();
 </script>
 </body>
 </html>
-
