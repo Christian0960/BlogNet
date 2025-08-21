@@ -1,4 +1,5 @@
-VERSION 0.138 - VERSION 1.0 RELEASES THIS FRIDAY!<!DOCTYPE html>
+VERSION 0.138 - VERSION 1.0 RELEASES THIS FRIDAY!
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -61,9 +62,6 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 const SECRET_KEY="MY_SECRET_KEY";
-let currentUserID = localStorage.getItem('userId');
-if(!currentUserID){ currentUserID='user_'+Date.now()+'_'+Math.floor(Math.random()*1000); localStorage.setItem('userId',currentUserID); }
-
 const firebaseConfig = {
   apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
   authDomain:"the-blog-network.firebaseapp.com",
@@ -74,6 +72,21 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+let currentUserID = localStorage.getItem('userId');
+async function initUserID() {
+  if (!currentUserID) {
+    currentUserID = 'user_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+    localStorage.setItem('userId', currentUserID);
+    // create user doc if it doesn't exist
+    await db.collection('users').doc(currentUserID).set({
+      username:'Unknown',
+      avatarURL:'https://via.placeholder.com/40',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
+  }
+}
+initUserID();
 
 const buttons=document.querySelectorAll('.filter-btn');
 const feed=document.getElementById('feed');
@@ -94,32 +107,18 @@ if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('u
 // === SMART SWEAR FILTER ===
 function sanitizeText(text) {
   const substitutions = {
-    'a': '[a@4]',
-    'b': '[b8]',
-    'c': '[c(]',
-    'e': '[e3]',
-    'g': '[g9]',
-    'i': '[i1!|]',
-    'l': '[l1|!]',
-    'o': '[o0]',
-    's': '[s$5]',
-    't': '[t7+]',
-    'z': '[z2]'
+    'a': '[a@4]','b': '[b8]','c': '[c(]','e': '[e3]','g': '[g9]',
+    'i': '[i1!|]','l': '[l1|!]','o': '[o0]','s': '[s$5]','t': '[t7+]','z':'[z2]'
   };
-
-  const badWords = ['fuck','shit','bitch','ass']; // add more root words here
+  const badWords = ['fuck','shit','bitch','ass'];
   const patterns = badWords.map(word => {
     const letters = word.split('').map(char => substitutions[char.toLowerCase()] || char);
-    return new RegExp(letters.join('[\\W_]*'), 'gi');
+    return new RegExp(letters.join('[\\W_]*'),'gi');
   });
-
   let cleanText = text;
-  patterns.forEach(regex => {
-    cleanText = cleanText.replace(regex, match => '*'.repeat(match.length));
-  });
+  patterns.forEach(regex => { cleanText = cleanText.replace(regex, match => '*'.repeat(match.length)); });
   return cleanText;
 }
-// ============================
 
 function formatTimestamp(date){
   const now=new Date(); const diffMs=now-date;
