@@ -91,7 +91,36 @@ const userCache={};
 
 if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
-function sanitizeText(text){ return text; }
+// === SMART SWEAR FILTER ===
+function sanitizeText(text) {
+  const substitutions = {
+    'a': '[a@4]',
+    'b': '[b8]',
+    'c': '[c(]',
+    'e': '[e3]',
+    'g': '[g9]',
+    'i': '[i1!|]',
+    'l': '[l1|!]',
+    'o': '[o0]',
+    's': '[s$5]',
+    't': '[t7+]',
+    'z': '[z2]'
+  };
+
+  const badWords = ['fuck','shit','bitch','ass']; // add more root words here
+  const patterns = badWords.map(word => {
+    const letters = word.split('').map(char => substitutions[char.toLowerCase()] || char);
+    return new RegExp(letters.join('[\\W_]*'), 'gi');
+  });
+
+  let cleanText = text;
+  patterns.forEach(regex => {
+    cleanText = cleanText.replace(regex, match => '*'.repeat(match.length));
+  });
+  return cleanText;
+}
+// ============================
+
 function formatTimestamp(date){
   const now=new Date(); const diffMs=now-date;
   const diffMins=Math.floor(diffMs/60000);
@@ -202,10 +231,11 @@ form.addEventListener('submit', async e=>{
   await userRef.set({username:newUsername, avatarURL:existing.avatarURL||'https://via.placeholder.com/40'},{merge:true});
 
   try{
+    const cleanContent = sanitizeText(content);
     if(currentFilter==='public'){
       await db.collection('publicPosts').add({
         authorId:currentUserID,
-        content:sanitizeText(content),
+        content:cleanContent,
         timestamp:firebase.firestore.FieldValue.serverTimestamp(),
         type:'public',
         key:SECRET_KEY
@@ -213,7 +243,7 @@ form.addEventListener('submit', async e=>{
     } else {
       await db.collection('users').doc(currentUserID).collection('profilePosts').add({
         authorId:currentUserID,
-        content:sanitizeText(content),
+        content:cleanContent,
         timestamp:firebase.firestore.FieldValue.serverTimestamp(),
         type:'profile',
         key:SECRET_KEY
@@ -228,4 +258,3 @@ form.addEventListener('submit', async e=>{
 </script>
 </body>
 </html>
-
