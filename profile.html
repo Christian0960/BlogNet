@@ -21,9 +21,11 @@
   #friends-container p, #blog-posts-container p, #friend-requests-container p { margin:4px 0; }
   #friends-container a { color:#3399ff; text-decoration:none; }
   #friends-container a:hover { text-decoration:underline; }
-  #avatar-username-container { display:flex; align-items:center; gap:15px; margin-bottom:15px; }
+  #avatar-username-container { display:flex; align-items:center; gap:15px; margin-bottom:15px; flex-direction:column; }
   #profile-avatar img { width:150px; height:150px; border-radius:50%; object-fit:cover; background:#ccc; }
-  #username-input { flex:1; font-size:20px; }
+  #username-input { font-size:20px; text-align:center; }
+  #dm-btn-profile { margin-top:10px; background:#3399ff; color:white; padding:6px 10px; border-radius:4px; border:none; cursor:pointer; font-weight:bold; }
+  #dm-btn-profile:hover { background:#2277cc; }
   .blog-post { border:2px inset #99ccff; background:#e6f0ff; padding:10px; margin-bottom:10px; border-radius:4px; font-size:13px; font-family:'Courier New', monospace; }
   .blog-post .timestamp { font-size:11px; color:#333; margin-bottom:5px; }
   #new-post-container { margin-bottom:20px; }
@@ -55,6 +57,7 @@
       <img id="avatar-preview" src="https://via.placeholder.com/150" alt="Avatar">
     </div>
     <input type="text" id="username-input" placeholder="Username">
+    <!-- DM Button will be inserted here -->
   </div>
 
   <label for="bio-input">Bio:</label>
@@ -142,6 +145,7 @@ const friendRequestsContainer=document.getElementById('friend-requests-container
 const friendActions=document.getElementById('friend-actions');
 const songPlayer=document.getElementById('song-player');
 const newPostContainer=document.getElementById('new-post-container');
+const avatarUsernameContainer = document.getElementById('avatar-username-container');
 
 function formatTimestamp(date){
   const now=new Date(); 
@@ -207,6 +211,7 @@ async function loadProfile(){
     loadFriends();
     loadFriendActions();
     loadFriendRequests();
+    addDMButton();
   }catch(err){console.error('Error loading profile:',err);}
 }
 
@@ -229,14 +234,10 @@ saveBtn.addEventListener('click',async()=>{
       wallpaper:wallpaperSelect.value
     };
 
-    // Save to Firestore
     await db.collection('users').doc(currentUserID).set(profileData,{merge:true});
-
-    // Update UI immediately (fixes reverting username)
     usernameInput.value = profileData.username;
     avatarPreview.src = profileData.avatarURL || 'https://via.placeholder.com/150';
     main.style.background = profileData.wallpaper;
-
     alert('Profile updated!');
   }catch(err){alert('Error saving profile: '+err.message);}
 });
@@ -341,6 +342,26 @@ async function loadFriendActions(){
     }catch(err){ alert('Error sending request: '+err.message); }
   });
   friendActions.appendChild(addBtn);
+}
+
+// DM button
+async function addDMButton(){
+  if(isOwnProfile) return;
+
+  const friendDoc = await db.collection('users').doc(currentUserID)
+    .collection('friends').doc(profileUserID).get();
+  if(!friendDoc.exists) return;
+
+  const existingBtn = document.getElementById('dm-btn-profile');
+  if(existingBtn) existingBtn.remove();
+
+  const dmBtn = document.createElement('button');
+  dmBtn.id='dm-btn-profile';
+  dmBtn.textContent='Start a conversation!💬';
+  dmBtn.addEventListener('click', ()=> {
+    window.location.href = `messages.html?user=${encodeURIComponent(profileUserID)}`;
+  });
+  avatarUsernameContainer.appendChild(dmBtn);
 }
 
 // Friend requests
