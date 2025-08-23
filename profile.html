@@ -195,6 +195,7 @@ async function loadProfile(){
     birthdayInput.value=data.birthday||'';
     avatarInput.value=data.avatarURL||'';
     wallpaperSelect.value=data.wallpaper||'#f0f4ff';
+    main.style.background = wallpaperSelect.value;
 
 const friendDoc = await db.collection('users').doc(profileUserID)
   .collection('friends').doc('user_1755141089023').get();
@@ -205,7 +206,7 @@ if (friendDoc.exists && !wallpaperSelect.querySelector(`option[value="#ffd700"]`
   wallpaperSelect.appendChild(goldOption);
 }
     avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
-    main.style.background=wallpaperSelect.value;
+
 
     songPlayer.innerHTML='';
     if(data.favoriteSong){
@@ -437,6 +438,7 @@ loadProfile();
 </script>
 </body>
 </html>
+
 
 
 
