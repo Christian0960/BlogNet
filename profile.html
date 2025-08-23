@@ -16,7 +16,16 @@
   main { max-width:700px; margin:30px auto; padding:20px; background:#ffffffcc; border:3px solid #9966ff; border-radius:6px; box-shadow:0 4px 10px rgba(153,102,255,0.3); transition:background 0.3s; }
   h1 { margin-bottom:10px; }
   label { display:block; margin:10px 0 5px; font-weight:bold; }
-  input[type="text"], input[type="url"], input[type="date"], textarea, select { width:100%; padding:8px; font-size:14px; border:2px solid #9966ff; border-radius:4px; }
+input[type="text"], input[type="url"], input[type="date"], textarea, select {
+  width: 90%;
+  max-width: 500px;
+  padding: 8px;
+  font-size: 14px;
+  border: 2px solid #9966ff;
+  border-radius: 4px;
+  margin: 0 auto;
+  display: block;
+}
   textarea { resize:vertical; min-height:60px; }
   #friends-container p, #blog-posts-container p, #friend-requests-container p { margin:4px 0; }
   #friends-container a { color:#3399ff; text-decoration:none; }
@@ -420,3 +429,4 @@ loadProfile();
 </script>
 </body>
 </html>
+
