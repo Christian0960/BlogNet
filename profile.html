@@ -197,16 +197,15 @@ async function loadProfile(){
     wallpaperSelect.value=data.wallpaper||'#f0f4ff';
   wallpaperSelect.value = data.wallpaper || '#f0f4ff';
 
-const friendDoc = await db.collection('users').doc(profileUserID)
-  .collection('friends').doc('user_1755141089023').get();
-if (friendDoc.exists && !wallpaperSelect.querySelector(`option[value="#ffd700"]`)) {
-  const goldOption = document.createElement('option');
-  goldOption.value = '#ffd700';
-  goldOption.text = 'Gold';
-  wallpaperSelect.appendChild(goldOption);
+if (data.wallpaper === '#ffd700') {
+  if (!wallpaperSelect.querySelector(`option[value="#ffd700"]`)) {
+    const goldOption = document.createElement('option');
+    goldOption.value = '#ffd700';
+    goldOption.text = 'Gold';
+    wallpaperSelect.appendChild(goldOption);
+  }
+  wallpaperSelect.value = '#ffd700';
 }
-
-main.style.background = wallpaperSelect.value;
     avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
 
 
@@ -440,6 +439,7 @@ loadProfile();
 </script>
 </body>
 </html>
+
 
 
 
