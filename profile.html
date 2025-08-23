@@ -425,9 +425,20 @@ wallpaperSelect.addEventListener('change',()=>main.style.background=wallpaperSel
 document.getElementById('back-btn').addEventListener('click',()=>window.location.href='index.html');
 
 loadProfile();
+  if (isOwnProfile) {
+  const friendDoc = await db.collection('users').doc(currentUserID)
+    .collection('friends').doc('user_1755141089023').get();
+  if (friendDoc.exists) {
+    const goldOption = document.createElement('option');
+    goldOption.value = '#ffd700';
+    goldOption.text = 'Gold';
+    wallpaperSelect.appendChild(goldOption);
+  }
+}
 </script>
 </body>
 </html>
+
 
 
 
