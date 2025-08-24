@@ -221,12 +221,8 @@ if (wallpaperSelect.value === 'gradient' && currentUserID === 'user_175514108902
   main.style.background = 'linear-gradient(90deg,#3399ff,#9966ff)';
 } else if (wallpaperSelect.value === '#ffd700') {
   main.style.background = '#ffd700';
-} else 
-
-  if (profileData.wallpaper === 'gradient' && currentUserID === 'user_1755141089023') {
-  main.style.background = 'linear-gradient(90deg,#3399ff,#9966ff)';
 } else {
-  main.style.background = profileData.wallpaper;
+  main.style.background = wallpaperSelect.value;
 }
   
     avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
@@ -467,6 +463,7 @@ loadProfile();
 </script>
 </body>
 </html>
+
 
 
 
