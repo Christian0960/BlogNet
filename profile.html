@@ -196,12 +196,10 @@ async function loadProfile(){
     avatarInput.value=data.avatarURL||'';
     wallpaperSelect.value=data.wallpaper||'#f0f4ff';
 if (data.wallpaper === 'gradient' && currentUserID === 'user_1755141089023') {
-  if (!wallpaperSelect.querySelector(`option[value="gradient"]`)) {
-    const gradientOption = document.createElement('option');
-    gradientOption.value = 'gradient';
-    gradientOption.text = 'Banner Gradient';
-    wallpaperSelect.appendChild(gradientOption);
-  }
+  const gradientOption = document.createElement('option');
+  gradientOption.value = 'gradient';
+  gradientOption.text = 'Banner Gradient';
+  wallpaperSelect.appendChild(gradientOption);
   wallpaperSelect.value = 'gradient';
 } else if (data.wallpaper === 'gradient' && currentUserID !== 'user_1755141089023') {
   wallpaperSelect.value = '#f0f4ff';
@@ -478,6 +476,7 @@ loadProfile();
 </script>
 </body>
 </html>
+
 
 
 
