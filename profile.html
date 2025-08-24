@@ -280,7 +280,13 @@ saveBtn.addEventListener('click',async()=>{
     await db.collection('users').doc(currentUserID).set(profileData,{merge:true});
     usernameInput.value = profileData.username;
     avatarPreview.src = profileData.avatarURL || 'https://preview.redd.it/made-a-frutiger-aero-default-pfp-v0-techv3ww70eb1.png?auto=webp&s=cef6cc3645c0fff280d25325f3b0a00c51038167';
-    main.style.background = profileData.wallpaper;
+  if (wallpaperSelect.value === 'gradient' && currentUserID === 'user_1755141089023') {
+  main.style.background = 'linear-gradient(90deg,#3399ff,#9966ff)';
+} else if (wallpaperSelect.value === '#ffd700') {
+  main.style.background = '#ffd700';
+} else {
+  main.style.background = wallpaperSelect.value;
+}
     alert('Profile updated!');
   }catch(err){alert('Error saving profile: '+err.message);}
 });
@@ -472,6 +478,7 @@ loadProfile();
 </script>
 </body>
 </html>
+
 
 
 
