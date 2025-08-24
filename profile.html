@@ -284,7 +284,7 @@ saveBtn.addEventListener('click',async()=>{
 
     await db.collection('users').doc(currentUserID).set(profileData,{merge:true});
     usernameInput.value = profileData.username;
-    avatarPreview.src = profileData.avatarURL || 'https://preview.redd.it/made-a-frutiger-aero-default-pfp-v0-techv3ww70eb1.png?auto=webp&s=cef6cc3645c0fff280d25325f3b0a00c51038167';
+    avatarPreview.src = profileData.avatarURL || 'https://i.pinimg.com/236x/ec/51/a2/ec51a23083467f2c84e23f721198d18f.jpg';
   if (wallpaperSelect.value === 'gradient' && currentUserID === 'user_1755141089023') {
   main.style.background = 'linear-gradient(90deg,#3399ff,#9966ff)';
 } else if (wallpaperSelect.value === '#ffd700') {
@@ -464,7 +464,7 @@ function loadFriendRequests(){
 }
 
 // Avatar & wallpaper preview
-avatarInput.addEventListener('input',()=>avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150');
+avatarInput.addEventListener('input',()=>avatarPreview.src=avatarInput.value||'https://i.pinimg.com/236x/ec/51/a2/ec51a23083467f2c84e23f721198d18f.jpg');
 wallpaperSelect.addEventListener('change',()=>{
   if (profileUserID === 'user_1755141089023' && wallpaperSelect.value === 'gradient') {
     main.style.background = 'linear-gradient(90deg,#3399ff,#9966ff)';
@@ -483,3 +483,4 @@ loadProfile();
 </script>
 </body>
 </html>
+
