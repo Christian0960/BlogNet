@@ -195,9 +195,17 @@ async function loadProfile(){
     birthdayInput.value=data.birthday||'';
     avatarInput.value=data.avatarURL||'';
     wallpaperSelect.value=data.wallpaper||'#f0f4ff';
-  wallpaperSelect.value = data.wallpaper || '#f0f4ff';
-
-if (data.wallpaper === '#ffd700') {
+if (data.wallpaper === 'gradient' && currentUserID === 'your_specific_id') {
+  if (!wallpaperSelect.querySelector(`option[value="gradient"]`)) {
+    const gradientOption = document.createElement('option');
+    gradientOption.value = 'gradient';
+    gradientOption.text = 'Banner Gradient';
+    wallpaperSelect.appendChild(gradientOption);
+  }
+  wallpaperSelect.value = 'gradient';
+} else if (data.wallpaper === 'gradient' && currentUserID !== 'your_specific_id') {
+  wallpaperSelect.value = '#f0f4ff';
+} else if (data.wallpaper === '#ffd700') {
   if (!wallpaperSelect.querySelector(`option[value="#ffd700"]`)) {
     const goldOption = document.createElement('option');
     goldOption.value = '#ffd700';
@@ -205,8 +213,17 @@ if (data.wallpaper === '#ffd700') {
     wallpaperSelect.appendChild(goldOption);
   }
   wallpaperSelect.value = '#ffd700';
+} else {
+  wallpaperSelect.value = data.wallpaper || '#f0f4ff';
 }
-    main.style.background = wallpaperSelect.value;
+
+if (wallpaperSelect.value === 'gradient' && currentUserID === 'your_specific_id') {
+  main.style.background = 'linear-gradient(90deg,#3399ff,#9966ff)';
+} else if (wallpaperSelect.value === '#ffd700') {
+  main.style.background = '#ffd700';
+} else {
+  main.style.background = wallpaperSelect.value;
+}
     avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
 
 
@@ -440,6 +457,7 @@ loadProfile();
 </script>
 </body>
 </html>
+
 
 
 
