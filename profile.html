@@ -221,9 +221,14 @@ if (wallpaperSelect.value === 'gradient' && currentUserID === 'user_175514108902
   main.style.background = 'linear-gradient(90deg,#3399ff,#9966ff)';
 } else if (wallpaperSelect.value === '#ffd700') {
   main.style.background = '#ffd700';
+} else 
+
+  if (profileData.wallpaper === 'gradient' && currentUserID === 'your_specific_id') {
+  main.style.background = 'linear-gradient(90deg,#3399ff,#9966ff)';
 } else {
-  main.style.background = wallpaperSelect.value;
+  main.style.background = profileData.wallpaper;
 }
+  
     avatarPreview.src=avatarInput.value||'https://via.placeholder.com/150';
 
 
@@ -260,6 +265,11 @@ saveBtn.addEventListener('click',async()=>{
     const usernameCheck=await db.collection('users').where('username','==',username).get();
     const isTaken=!usernameCheck.empty&&!(usernameCheck.docs.length===1&&usernameCheck.docs[0].id===currentUserID);
     if(isTaken) return alert('Username already taken!');
+
+    if (wallpaperSelect.value === 'gradient' && currentUserID !== 'user_1755141089023') {
+  alert('You are not authorized to use this wallpaper.');
+  return;
+}
 
     const profileData={
       username,
@@ -457,6 +467,7 @@ loadProfile();
 </script>
 </body>
 </html>
+
 
 
 
