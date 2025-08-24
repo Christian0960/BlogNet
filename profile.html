@@ -197,6 +197,12 @@ async function loadProfile(){
     wallpaperSelect.value=data.wallpaper||'#f0f4ff';
 if (data.wallpaper === 'gradient' && currentUserID === 'user_1755141089023') {
   const gradientOption = document.createElement('option');
+  if (currentUserID === 'user_1755141089023' && !wallpaperSelect.querySelector(`option[value="gradient"]`)) {
+  const gradientOption = document.createElement('option');
+  gradientOption.value = 'gradient';
+  gradientOption.text = 'Banner Gradient';
+  wallpaperSelect.appendChild(gradientOption);
+}
   gradientOption.value = 'gradient';
   gradientOption.text = 'Banner Gradient';
   wallpaperSelect.appendChild(gradientOption);
@@ -476,6 +482,7 @@ loadProfile();
 </script>
 </body>
 </html>
+
 
 
 
