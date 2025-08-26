@@ -208,6 +208,18 @@
       loadMessages();
     }
 
+if (currentUserID && selectedFriendID) {
+  db.collection('users').doc(currentUserID).collection('dms').doc(selectedFriendID).collection('messages')
+    .where('read', '==', false)
+    .where('senderID', '!=', currentUserID)
+    .get()
+    .then(snapshot => {
+      snapshot.forEach(doc => {
+        doc.ref.update({ read: true });
+      });
+    });
+}
+
     function loadMessages(){
       if(!selectedFriendID) return;
       db.collection('users').doc(currentUserID)
@@ -252,3 +264,4 @@
   </script>
 </body>
 </html>
+
