@@ -205,20 +205,20 @@
     function selectConversation(friendID, friendName){
       selectedFriendID = friendID;
       messagesDiv.innerHTML = `<div class="message received">Chatting with ${friendName}</div>`;
+  
+  if (currentUserID && selectedFriendID) {
+    db.collection('users').doc(currentUserID).collection('dms').doc(selectedFriendID).collection('messages')
+      .where('read', '==', false)
+      .where('senderID', '!=', currentUserID)
+      .get()
+      .then(snapshot => {
+        snapshot.forEach(doc => {
+          doc.ref.update({ read: true });
+        });
+      });
+  }
       loadMessages();
     }
-
-if (currentUserID && selectedFriendID) {
-  db.collection('users').doc(currentUserID).collection('dms').doc(selectedFriendID).collection('messages')
-    .where('read', '==', false)
-    .where('senderID', '!=', currentUserID)
-    .get()
-    .then(snapshot => {
-      snapshot.forEach(doc => {
-        doc.ref.update({ read: true });
-      });
-    });
-}
 
     function loadMessages(){
       if(!selectedFriendID) return;
@@ -264,4 +264,3 @@ if (currentUserID && selectedFriendID) {
   </script>
 </body>
 </html>
-
