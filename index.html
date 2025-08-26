@@ -100,6 +100,16 @@ const profileBtn=document.getElementById('profile-btn');
 const dmBtn=document.getElementById('dm-btn');
 const dmDot=document.getElementById('dm-dot');
 
+  db.collection('users').doc(currentUserID).collection('messages')
+  .where('read', '==', false)
+  .onSnapshot(snapshot => {
+    if (snapshot.docs.length > 0) {
+      dmDot.style.display = 'block';
+    } else {
+      dmDot.style.display = 'none';
+    }
+  });
+
 let currentFilter='public';
 let friendIds=new Set();
 let lastSeenMap={};
@@ -260,6 +270,7 @@ form.addEventListener('submit', async e=>{
 </script>
 </body>
 </html>
+
 
 
 
