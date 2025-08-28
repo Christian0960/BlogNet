@@ -103,16 +103,21 @@ const dmDot=document.getElementById('dm-dot');
 db.collection('users').doc(currentUserID).collection('dms')
   .onSnapshot(conversations => {
     let unreadCount = 0;
+    let conversationCount = conversations.docs.length;
+    let processedConversations = 0;
     conversations.docs.forEach(conversation => {
       db.collection('users').doc(currentUserID).collection('dms').doc(conversation.id).collection('messages')
         .where('read', '==', false)
         .where('senderID', '!=', currentUserID)
         .onSnapshot(snapshot => {
           unreadCount += snapshot.docs.length;
-          if (unreadCount > 0) {
-            dmDot.style.display = 'block';
-          } else {
-            dmDot.style.display = 'none';
+          processedConversations++;
+          if (processedConversations === conversationCount) {
+            if (unreadCount > 0) {
+              dmDot.style.display = 'block';
+            } else {
+              dmDot.style.display = 'none';
+            }
           }
         });
     });
