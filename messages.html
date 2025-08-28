@@ -150,6 +150,8 @@
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>localStorage.setItem('lastDMsOpenedAt', String(Date.now()));</script>
+
   <script>
     const firebaseConfig = {
       apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
@@ -234,7 +236,12 @@
           });
           messagesDiv.scrollTop = messagesDiv.scrollHeight;
         });
+
+      
+      
     }
+
+    
 
     sendBtn.addEventListener('click', async ()=>{
       if(!selectedFriendID) return alert('Select a friend to message!');
@@ -262,4 +269,3 @@
   </script>
 </body>
 </html>
-
