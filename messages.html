@@ -250,7 +250,8 @@
       if(!friendIds.has(selectedFriendID)) return alert('You can only message friends!');
       
       const timestamp = firebase.firestore.FieldValue.serverTimestamp();
-      const messageData = { senderID: currentUserID, content, timestamp, key: "MY_SECRET_KEY" };
+      const messageData = { senderID: currentUserID, content, timestamp, read: false, key: "MY_SECRET_KEY" };
+
 
       try{
         await db.collection('users').doc(currentUserID)
@@ -269,3 +270,4 @@
   </script>
 </body>
 </html>
+
