@@ -1,4 +1,4 @@
-VERSION 0.138 - VERSION 1.0 RELEASES THIS WEDNESDAY!
+VERSION 0.139 - VERSION 1.0 RELEASES SOON!
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -100,14 +100,22 @@ const profileBtn=document.getElementById('profile-btn');
 const dmBtn=document.getElementById('dm-btn');
 const dmDot=document.getElementById('dm-dot');
 
-  db.collection('users').doc(currentUserID).collection('messages')
-  .where('read', '==', false)
-  .onSnapshot(snapshot => {
-    if (snapshot.docs.length > 0) {
-      dmDot.style.display = 'block';
-    } else {
-      dmDot.style.display = 'none';
-    }
+db.collection('users').doc(currentUserID).collection('dms')
+  .onSnapshot(conversations => {
+    let unreadCount = 0;
+    conversations.docs.forEach(conversation => {
+      db.collection('users').doc(currentUserID).collection('dms').doc(conversation.id).collection('messages')
+        .where('read', '==', false)
+        .where('senderID', '!=', currentUserID)
+        .onSnapshot(snapshot => {
+          unreadCount += snapshot.docs.length;
+          if (unreadCount > 0) {
+            dmDot.style.display = 'block';
+          } else {
+            dmDot.style.display = 'none';
+          }
+        });
+    });
   });
 
 let currentFilter='public';
@@ -270,9 +278,3 @@ form.addEventListener('submit', async e=>{
 </script>
 </body>
 </html>
-
-
-
-
-
-
