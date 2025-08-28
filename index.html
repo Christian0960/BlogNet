@@ -64,6 +64,7 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
+/* ------------ Firebase ------------ */
 const SECRET_KEY="MY_SECRET_KEY";
 const firebaseConfig = {
   apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
@@ -76,21 +77,26 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+/* ------------ User bootstrap ------------ */
 let currentUserID = localStorage.getItem('userId');
 async function initUserID() {
   if (!currentUserID) {
     currentUserID = 'user_'+Date.now()+'_'+Math.floor(Math.random()*1000);
     localStorage.setItem('userId', currentUserID);
-    // create user doc if it doesn't exist
     await db.collection('users').doc(currentUserID).set({
       username:'Unknown',
       avatarURL:'https://via.placeholder.com/40',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }, {merge:true});
   }
+  // Initialize "last seen DMs open" the first time the site is used
+  if (!localStorage.getItem('lastDMsOpenedAt')) {
+    localStorage.setItem('lastDMsOpenedAt', String(Date.now()));
+  }
 }
 initUserID();
 
+/* ------------ DOM refs ------------ */
 const buttons=document.querySelectorAll('.filter-btn');
 const feed=document.getElementById('feed');
 const form=document.getElementById('post-form');
@@ -99,37 +105,17 @@ const usernameInput=document.getElementById('username');
 const profileBtn=document.getElementById('profile-btn');
 const dmBtn=document.getElementById('dm-btn');
 const dmDot=document.getElementById('dm-dot');
-let dmDotDisplayed = false;
 
-db.collection('users').doc(currentUserID).collection('dms')
-  .onSnapshot(conversations => {
-    conversations.docs.forEach(conversation => {
-      db.collection('users').doc(currentUserID).collection('dms').doc(conversation.id).collection('messages')
-        .where('read', '==', false)
-        .where('senderID', '!=', currentUserID)
-        .onSnapshot(snapshot => {
-          if (snapshot.docs.length > 0 && !dmDotDisplayed) {
-            dmDot.style.display = 'block';
-            dmDotDisplayed = true;
-          }
-        });
-    });
-  });
-
-dmBtn.addEventListener('click', () => {
-  dmDot.style.display = 'none';
-  dmDotDisplayed = false;
-  window.location.href = 'messages.html';
-});
-
+/* ------------ State ------------ */
 let currentFilter='public';
 let friendIds=new Set();
 let lastSeenMap={};
 const userCache={};
 
+/* Prefill username from localStorage */
 if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
-// === SMART SWEAR FILTER ===
+/* ------------ Smart swear filter ------------ */
 function sanitizeText(text) {
   const substitutions = {
     'a': '[a@4]','b': '[b8]','c': '[c(]','e': '[e3]','g': '[g9]',
@@ -145,6 +131,7 @@ function sanitizeText(text) {
   return cleanText;
 }
 
+/* ------------ Utils ------------ */
 function formatTimestamp(date){
   const now=new Date(); const diffMs=now-date;
   const diffMins=Math.floor(diffMs/60000);
@@ -159,7 +146,15 @@ function formatTimestamp(date){
   return `${diffDays} days ago`;
 }
 
-// Filter buttons
+async function getUserData(userId){
+  if(userCache[userId]) return userCache[userId];
+  const doc = await db.collection('users').doc(userId).get();
+  const data = doc.exists ? doc.data() : {username:'Unknown', avatarURL:'https://via.placeholder.com/40'};
+  userCache[userId] = data;
+  return data;
+}
+
+/* ------------ Navigation ------------ */
 buttons.forEach(btn=>{
   btn.addEventListener('click',()=>{
     buttons.forEach(b=>b.classList.remove('active'));
@@ -172,45 +167,127 @@ buttons.forEach(btn=>{
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
 dmBtn.addEventListener('click',()=>{ window.location.href='messages.html'; });
 
-// Friends subscription
-function subscribeFriends(){
-  db.collection('users').doc(currentUserID).collection('friends').onSnapshot(snap=>{
-    friendIds=new Set();
-    snap.forEach(doc=>friendIds.add(doc.id));
-    friendIds.add(currentUserID);
-    db.collection('users').doc(currentUserID).get().then(doc=>{
-      if(doc.exists && doc.data().lastSeen) lastSeenMap=doc.data().lastSeen;
-      fetchPosts();
+/* ------------ DM Notification Dot (since last open of messages.html) ------------ */
+let dmConversationsUnsub = null;
+let dmMessageUnsubs = [];
+
+function clearDmMessageUnsubs(){
+  dmMessageUnsubs.forEach(u=>{ try{u();}catch(e){} });
+  dmMessageUnsubs = [];
+}
+
+function subscribeDMNotifications(){
+  if(dmConversationsUnsub){ try{dmConversationsUnsub();}catch(e){} }
+  dmConversationsUnsub = db.collection('users').doc(currentUserID).collection('dms')
+    .onSnapshot(conversations => {
+      clearDmMessageUnsubs();
+      conversations.docs.forEach(conversation => {
+        const friendId = conversation.id;
+        const unsub = db.collection('users').doc(currentUserID)
+          .collection('dms').doc(friendId)
+          .collection('messages')
+          .orderBy('timestamp','desc')
+          .limit(1)
+          .onSnapshot(snapshot => {
+            const lastOpen = Number(localStorage.getItem('lastDMsOpenedAt') || 0);
+            const latest = snapshot.docs[0]?.data();
+            const ts = latest && latest.timestamp && latest.timestamp.toDate ? latest.timestamp.toDate().getTime() : 0;
+            if (latest && latest.senderID !== currentUserID && ts > lastOpen) {
+              dmDot.style.display = 'block';
+            }
+          });
+        dmMessageUnsubs.push(unsub);
+      });
     });
+}
+
+// If another tab sets lastDMsOpenedAt (i.e., user opened messages.html there), hide dot here.
+window.addEventListener('storage', (e) => {
+  if (e.key === 'lastDMsOpenedAt') {
+    dmDot.style.display = 'none';
+  }
+});
+
+/* ------------ Friends + Posts (Realtime) ------------ */
+let publicUnsub = null;
+let profileUnsubs = [];
+let cachedPublicPosts = [];
+const friendPostsMap = {}; // uid -> array of posts
+
+function clearProfileUnsubs(){
+  profileUnsubs.forEach(u=>{ try{u();}catch(e){} });
+  profileUnsubs = [];
+}
+
+function subscribePublicPosts(){
+  if(publicUnsub){ try{publicUnsub();}catch(e){} }
+  publicUnsub = db.collection('publicPosts')
+    .orderBy('timestamp','desc')
+    .onSnapshot(snap=>{
+      cachedPublicPosts = snap.docs.map(d=>({id:d.id, data:d.data(), type:'public'}));
+      if(currentFilter==='public') renderFeed();
+    });
+}
+
+function subscribeProfilePosts(){
+  clearProfileUnsubs();
+  // subscribe to each friend's profile posts (and own)
+  [...friendIds].forEach(uid=>{
+    const unsub = db.collection('users').doc(uid).collection('profilePosts')
+      .orderBy('timestamp','desc')
+      .onSnapshot(snap=>{
+        friendPostsMap[uid] = snap.docs.map(d=>({id:d.id, data:d.data(), type:'profile'}));
+        if(currentFilter!=='public') renderFeed();
+      });
+    profileUnsubs.push(unsub);
   });
 }
+
+function subscribeFriends(){
+  db.collection('users').doc(currentUserID).collection('friends')
+    .onSnapshot(snap=>{
+      friendIds = new Set();
+      snap.forEach(doc=>friendIds.add(doc.id));
+      friendIds.add(currentUserID); // include self
+      // load lastSeen map for potential unseen filter (kept from your code)
+      db.collection('users').doc(currentUserID).get().then(doc=>{
+        if(doc.exists && doc.data().lastSeen) lastSeenMap=doc.data().lastSeen;
+      });
+      // (re)subscribe to profile posts for this friend set
+      subscribeProfilePosts();
+    });
+}
+subscribePublicPosts();
 subscribeFriends();
+subscribeDMNotifications();
 
-// Fetch user data if not cached
-async function getUserData(userId){
-  if(userCache[userId]) return userCache[userId];
-  const doc = await db.collection('users').doc(userId).get();
-  const data = doc.exists ? doc.data() : {username:'Unknown', avatarURL:'https://via.placeholder.com/40'};
-  userCache[userId] = data;
-  return data;
-}
-
-// Fetch posts
-let cachedPosts=[];
-async function fetchPosts(){
-  const profilePromises = [...friendIds].map(uid => db.collection('users').doc(uid).collection('profilePosts').orderBy('timestamp','desc').get());
-  const profileSnaps = await Promise.all(profilePromises);
-  const profilePosts = profileSnaps.flatMap(snap => snap.docs.map(d=>({id:d.id,data:d.data(), type:'profile'})));
-  const publicSnap = await db.collection('publicPosts').orderBy('timestamp','desc').get();
-  const publicPosts = publicSnap.docs.map(d=>({id:d.id,data:d.data(), type:'public'}));
-  cachedPosts = [...profilePosts, ...publicPosts];
-  renderFeed();
-}
-
-// Render feed
+/* ------------ Render feed ------------ */
 async function renderFeed(){
   feed.innerHTML='';
-  for(const p of cachedPosts){
+
+  let posts = [];
+  if(currentFilter==='public'){
+    posts = cachedPublicPosts.slice();
+  }else if(currentFilter==='friends'){
+    posts = Object.values(friendPostsMap).flat();
+  }else if(currentFilter==='unseen'){
+    // Optional: if you add an "Unseen" button back someday
+    posts = Object.values(friendPostsMap).flat().filter(p=>{
+      const authorId = p.data.authorId;
+      const lastSeen=lastSeenMap[authorId]||0;
+      const postTime=p.data.timestamp && p.data.timestamp.toDate ? p.data.timestamp.toDate().getTime() : 0;
+      return postTime>lastSeen;
+    });
+  }
+
+  // sort newest first
+  posts.sort((a,b)=>{
+    const ta = a.data.timestamp && a.data.timestamp.toDate ? a.data.timestamp.toDate().getTime() : 0;
+    const tb = b.data.timestamp && b.data.timestamp.toDate ? b.data.timestamp.toDate().getTime() : 0;
+    return tb - ta;
+  });
+
+  for(const p of posts){
     const post=p.data;
     const authorId=post.authorId;
     const userData = await getUserData(authorId);
@@ -219,21 +296,11 @@ async function renderFeed(){
     article.dataset.type=p.type;
     article.dataset.author=authorId;
 
-    let show=true;
-    if(currentFilter==='public') show=(p.type==='public');
-    else if(currentFilter==='friends') show=(p.type==='profile' && friendIds.has(authorId));
-    else if(currentFilter==='unseen'){
-      const lastSeen=lastSeenMap[authorId]||0;
-      const postTime=post.timestamp?post.timestamp.toDate().getTime():0;
-      show=(p.type==='profile' && postTime>lastSeen);
-    }
-
-    article.style.display=show?'flex':'none';
     article.innerHTML=`
       <img src="${userData.avatarURL}" alt="avatar" class="profile-link" data-userid="${authorId}">
       <div class="post-content">
         <div class="author"><a href="profile.html?user=${encodeURIComponent(authorId)}">${userData.username}</a></div>
-        <div class="timestamp">${post.timestamp?formatTimestamp(post.timestamp.toDate()):''}</div>
+        <div class="timestamp">${post.timestamp && post.timestamp.toDate ? formatTimestamp(post.timestamp.toDate()) : ''}</div>
         <div class="content">${post.content}</div>
       </div>
     `;
@@ -242,7 +309,7 @@ async function renderFeed(){
   }
 }
 
-// Posting
+/* ------------ Posting ------------ */
 form.addEventListener('submit', async e=>{
   e.preventDefault();
   const content=textarea.value.trim();
@@ -276,10 +343,9 @@ form.addEventListener('submit', async e=>{
       await userRef.set({lastSeen:lastSeenMap},{merge:true});
     }
     textarea.value='';
-    fetchPosts();
+    // No manual fetch needed; realtime listeners will update the feed.
   }catch(err){ alert('Error posting: '+err.message); }
 });
 </script>
 </body>
 </html>
-
