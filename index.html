@@ -89,6 +89,9 @@ async function initUserID() {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }, {merge:true});
   }
+  if (!localStorage.getItem('lastDMsOpenedAt')) {
+    localStorage.setItem('lastDMsOpenedAt', String(Date.now()));
+  }
 }
 initUserID();
 
@@ -157,53 +160,45 @@ buttons.forEach(btn=>{
 });
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
 
-/* ------------ DM Notification Dot (Realtime) ------------ */
+/* ------------ DM Notification Dot (Fixed) ------------ */
 function subscribeDMNotifications() {
-  const dmCol = db.collection('users').doc(currentUserID).collection('dms');
+  db.collection('users').doc(currentUserID).collection('dms')
+    .onSnapshot(async conversations => {
+      const lastOpen = Number(localStorage.getItem('lastDMsOpenedAt') || 0);
+      let hasNew = false;
 
-  dmCol.onSnapshot(async snapshot => {
-    let hasNew = false;
+      const checks = conversations.docs.map(async conversation => {
+        const friendId = conversation.id;
+        const messagesSnap = await db.collection('users').doc(currentUserID)
+          .collection('dms').doc(friendId)
+          .collection('messages')
+          .orderBy('timestamp','desc')
+          .limit(1)
+          .get();
 
-    for (const doc of snapshot.docs) {
-      const friendId = doc.id;
-      const messagesSnap = await dmCol.doc(friendId)
-        .collection('messages')
-        .where('read', '==', false)
-        .where('senderID', '!=', currentUserID)
-        .limit(1)
-        .get();
+        const latest = messagesSnap.docs[0]?.data();
+        const ts = latest?.timestamp?.toDate().getTime() || 0;
+        if (latest && latest.senderID !== currentUserID && ts > lastOpen) {
+          hasNew = true;
+        }
+      });
 
-      if (!messagesSnap.empty) {
-        hasNew = true;
-        break;
-      }
-    }
-
-    dmDot.style.display = hasNew ? 'block' : 'none';
-  });
+      await Promise.all(checks);
+      dmDot.style.display = hasNew ? 'block' : 'none';
+    });
 }
 
-// When DM button clicked
+// Hide dot if lastDMsOpenedAt updated in another tab
+window.addEventListener('storage', e => { if(e.key==='lastDMsOpenedAt') dmDot.style.display='none'; });
+
+// Reset lastDMsOpenedAt when DM button clicked
 dmBtn.addEventListener('click', () => {
-  const dmCol = db.collection('users').doc(currentUserID).collection('dms');
-
-  dmCol.get().then(async snapshot => {
-    for (const doc of snapshot.docs) {
-      const friendId = doc.id;
-      const messagesSnap = await dmCol.doc(friendId)
-        .collection('messages')
-        .where('read', '==', false)
-        .where('senderID', '!=', currentUserID)
-        .get();
-
-      messagesSnap.forEach(msg => msg.ref.update({ read: true }));
-    }
-
-    dmDot.style.display = 'none';
-    window.location.href = 'messages.html';
-  });
+  localStorage.setItem('lastDMsOpenedAt', String(Date.now()));
+  dmDot.style.display='none';
+  window.location.href='messages.html';
 });
 
+// Start DM notifications
 subscribeDMNotifications();
 
 /* ------------ Friends + Posts (Realtime) ------------ */
@@ -260,8 +255,8 @@ async function renderFeed(){
   feed.innerHTML='';
   let posts = currentFilter==='public' ? cachedPublicPosts.slice() : Object.values(friendPostsMap).flat();
   posts.sort((a,b)=>{
-    const ta=a.data.timestamp?.toDate?.getTime()||0;
-    const tb=b.data.timestamp?.toDate?.getTime()||0;
+    const ta=a.data.timestamp?.toDate().getTime()||0;
+    const tb=b.data.timestamp?.toDate().getTime()||0;
     return tb-ta;
   });
 
@@ -326,3 +321,4 @@ form.addEventListener('submit', async e=>{
 </script>
 </body>
 </html>
+
