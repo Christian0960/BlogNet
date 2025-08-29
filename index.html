@@ -32,9 +32,9 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 </head>
 <body>
 
-<header style="display:flex; justify-content:space-between; align-items:center;">
+<header>
   <div style="display:flex; align-items:center; gap:10px;">
-    <a href='https://ko-fi.com/ruppeey' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi3.png?v=3' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+    <a href='https://ko-fi.com/ruppeey' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi3.png?v=3' border='0' alt='Buy Me a Coffee' /></a>
     <div class="logo-container">
       <div class="logo">THE BLOG NETWORK</div>
       <div class="tagline">Chat with others!</div>
@@ -63,6 +63,7 @@ footer { text-align:center; margin:20px auto; font-size:12px; font-family:'Couri
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
 <script>
 /* ------------ Firebase ------------ */
 const SECRET_KEY="MY_SECRET_KEY";
@@ -111,7 +112,7 @@ let friendIds=new Set();
 let lastSeenMap={};
 const userCache={};
 
-/* Prefill username from localStorage */
+/* Prefill username */
 if(localStorage.getItem('username')) usernameInput.value=localStorage.getItem('username');
 
 /* ------------ Utils ------------ */
@@ -160,7 +161,7 @@ buttons.forEach(btn=>{
 });
 profileBtn.addEventListener('click',()=>{ window.location.href=`profile.html?user=${encodeURIComponent(currentUserID)}`; });
 
-/* ------------ DM Notification Dot (Fixed) ------------ */
+/* ------------ DM Notification Dot ------------ */
 function subscribeDMNotifications() {
   db.collection('users').doc(currentUserID).collection('dms')
     .onSnapshot(async conversations => {
@@ -188,17 +189,14 @@ function subscribeDMNotifications() {
     });
 }
 
-// Hide dot if lastDMsOpenedAt updated in another tab
 window.addEventListener('storage', e => { if(e.key==='lastDMsOpenedAt') dmDot.style.display='none'; });
 
-// Reset lastDMsOpenedAt when DM button clicked
 dmBtn.addEventListener('click', () => {
   localStorage.setItem('lastDMsOpenedAt', String(Date.now()));
   dmDot.style.display='none';
   window.location.href='messages.html';
 });
 
-// Start DM notifications
 subscribeDMNotifications();
 
 /* ------------ Friends + Posts (Realtime) ------------ */
@@ -207,10 +205,7 @@ let profileUnsubs=[];
 let cachedPublicPosts=[];
 const friendPostsMap={};
 
-function clearProfileUnsubs(){
-  profileUnsubs.forEach(u=>{ try{u(); }catch(e){} });
-  profileUnsubs=[];
-}
+function clearProfileUnsubs(){ profileUnsubs.forEach(u=>{ try{u(); }catch(e){} }); profileUnsubs=[]; }
 
 function subscribePublicPosts(){
   if(publicUnsub) try{ publicUnsub(); }catch(e){}
