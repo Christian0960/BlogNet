@@ -97,6 +97,8 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 const firebaseConfig = {
   apiKey:"AIzaSyBGNJwqrVv4lMPBTXiwwhv81cxCrIYF6V0",
@@ -108,6 +110,10 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+// Enable offline persistence for instant writes
+firebase.firestore().enablePersistence()
+  .catch(err => console.warn('Persistence error:', err));
 
 // Current user ID
 let currentUserID = localStorage.getItem('userId');
@@ -128,69 +134,80 @@ let friendIds = new Set();
 let messagesUnsub = null;
 
 backBtn.addEventListener('click', () => { 
-  localStorage.setItem('lastDMsOpenedAt', String(Date.now())); 
+  localStorage.setItem('lastDMsOpenedAt', String(Date.now()));
   window.location.href='index.html';
 });
 
 // Real-time friend list
 db.collection('users').doc(currentUserID).collection('friends')
-  .onSnapshot(snapshot=>{
+  .onSnapshot(snapshot => {
     friendIds.clear();
-    conversationsDiv.innerHTML='<h2>Chats</h2>';
+    conversationsDiv.innerHTML = '<h2>Chats</h2>';
     if(snapshot.empty){
-      const p=document.createElement('p'); p.textContent='No friends yet.'; conversationsDiv.appendChild(p); return;
+      const p = document.createElement('p');
+      p.textContent = 'No friends yet.';
+      conversationsDiv.appendChild(p);
+      return;
     }
-    snapshot.forEach(doc=>{
+    snapshot.forEach(doc => {
       friendIds.add(doc.id);
-      const div=document.createElement('div');
-      div.className='conversation';
-      div.textContent=doc.data().username||'Unknown';
-      div.dataset.userid=doc.id;
-      div.addEventListener('click',()=>selectConversation(doc.id, div.textContent));
+      const div = document.createElement('div');
+      div.className = 'conversation';
+      div.textContent = doc.data().username || 'Unknown';
+      div.dataset.userid = doc.id;
+      div.addEventListener('click', ()=>selectConversation(doc.id, div.textContent));
       conversationsDiv.appendChild(div);
     });
   });
 
 // Select a conversation
 function selectConversation(friendID, friendName){
-  selectedFriendID=friendID;
-  messagesDiv.innerHTML=`<div class="message received">Chatting with ${friendName}</div>`;
+  selectedFriendID = friendID;
+  messagesDiv.innerHTML = `<div class="message received">Chatting with ${friendName}</div>`;
 
-  if(messagesUnsub){ messagesUnsub(); messagesUnsub=null; }
+  if(messagesUnsub){ messagesUnsub(); messagesUnsub = null; }
 
-  const messagesRef=db.collection('users').doc(currentUserID)
+  const messagesRef = db.collection('users').doc(currentUserID)
     .collection('dms').doc(friendID).collection('messages').orderBy('timestamp','asc');
 
-  messagesUnsub=messagesRef.onSnapshot(snapshot=>{
-    messagesDiv.innerHTML='';
-    snapshot.forEach(doc=>{
-      const msg=doc.data();
-      const div=document.createElement('div');
-      div.className='message '+(msg.senderID===currentUserID?'sent':'received');
-      div.textContent=msg.content;
+  messagesUnsub = messagesRef.onSnapshot(snapshot => {
+    messagesDiv.innerHTML = '';
+    snapshot.forEach(doc => {
+      const msg = doc.data();
+      const div = document.createElement('div');
+      div.className = 'message ' + (msg.senderID === currentUserID ? 'sent' : 'received');
+      div.textContent = msg.content;
       messagesDiv.appendChild(div);
-      if(msg.senderID!==currentUserID && !msg.read){ doc.ref.update({read:true}).catch(console.error); }
+      if(msg.senderID !== currentUserID && !msg.read){
+        doc.ref.update({ read: true }).catch(console.error);
+      }
     });
-    messagesDiv.scrollTop=messagesDiv.scrollHeight;
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
   });
 }
 
-// Send message
+// Send message with batching + optimistic UI
 sendBtn.addEventListener('click', async () => {
   if (!selectedFriendID) return alert('Select a friend to message!');
   const content = inputBox.value.trim();
   if (!content) return;
   if (!friendIds.has(selectedFriendID)) return alert('You can only message friends!');
 
-  const localTimestamp = Date.now();
   const messageData = { 
-    senderID: currentUserID, 
-    content, 
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
+    senderID: currentUserID,
+    content,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
     read: false,
-    key: "MY_SECRET_KEY",
-    localTimestamp
+    key: "MY_SECRET_KEY"
   };
+
+  // Optimistic UI: show message instantly
+  const div = document.createElement('div');
+  div.className = 'message sent';
+  div.textContent = content;
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  inputBox.value = '';
 
   try {
     const currentUserDMRef = db.collection('users').doc(currentUserID)
@@ -198,27 +215,17 @@ sendBtn.addEventListener('click', async () => {
     const friendDMRef = db.collection('users').doc(selectedFriendID)
       .collection('dms').doc(currentUserID);
 
-    // Ensure DM docs exist
-    await Promise.all([
-      currentUserDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }),
-      friendDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
-    ]);
+    // Batch writes to reduce delay
+    const batch = db.batch();
+    batch.set(currentUserDMRef, { createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    batch.set(friendDMRef, { createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
 
-    // Use .doc() with auto ID to ensure rules apply instantly
-    const newMsgID = db.collection('dummy').doc().id; 
-    await Promise.all([
-      currentUserDMRef.collection('messages').doc(newMsgID).set(messageData),
-      friendDMRef.collection('messages').doc(newMsgID).set(messageData)
-    ]);
+    const currentMsgRef = currentUserDMRef.collection('messages').doc();
+    const friendMsgRef = friendDMRef.collection('messages').doc();
+    batch.set(currentMsgRef, messageData);
+    batch.set(friendMsgRef, messageData);
 
-    // Instant local display
-    const div = document.createElement('div');
-    div.className='message sent';
-    div.textContent = content;
-    messagesDiv.appendChild(div);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-    inputBox.value = '';
+    await batch.commit();
   } catch(err) {
     alert('Error sending message: ' + err.message);
   }
@@ -226,3 +233,4 @@ sendBtn.addEventListener('click', async () => {
 </script>
 </body>
 </html>
+
