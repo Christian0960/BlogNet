@@ -110,11 +110,8 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 // Current user ID
-let currentUserID = localStorage.getItem('userId');
-if(!currentUserID){
-  currentUserID = 'user_'+Date.now()+'_'+Math.floor(Math.random()*1000);
-  localStorage.setItem('userId', currentUserID);
-}
+let currentUserID = localStorage.getItem('userId') || ('user_'+Date.now()+'_'+Math.floor(Math.random()*1000));
+localStorage.setItem('userId', currentUserID);
 
 // Elements
 const messagesDiv = document.querySelector('.messages');
@@ -132,85 +129,68 @@ backBtn.addEventListener('click', () => {
   window.location.href='index.html';
 });
 
-// Real-time friend list
+// Simple chatID generator
+function generateChatID(userA,userB){ return [userA,userB].sort().join('_'); }
+
+// Friend list
 db.collection('users').doc(currentUserID).collection('friends')
   .onSnapshot(snapshot=>{
     friendIds.clear();
     conversationsDiv.innerHTML='<h2>Chats</h2>';
-    if(snapshot.empty){
-      const p=document.createElement('p'); p.textContent='No friends yet.'; conversationsDiv.appendChild(p); return;
-    }
+    if(snapshot.empty){ const p=document.createElement('p'); p.textContent='No friends yet.'; conversationsDiv.appendChild(p); return; }
     snapshot.forEach(doc=>{
       friendIds.add(doc.id);
       const div=document.createElement('div');
       div.className='conversation';
-      div.textContent=doc.data().username||'Unknown';
-      div.dataset.userid=doc.id;
+      div.textContent = doc.data().username || 'Unknown';
+      div.dataset.userid = doc.id;
       div.addEventListener('click',()=>selectConversation(doc.id, div.textContent));
       conversationsDiv.appendChild(div);
     });
   });
 
-// Select a conversation
+// Select conversation
 function selectConversation(friendID, friendName){
-  selectedFriendID=friendID;
-  messagesDiv.innerHTML=`<div class="message received">Chatting with ${friendName}</div>`;
+  selectedFriendID = friendID;
+  messagesDiv.innerHTML = `<div class="message received">Chatting with ${friendName}</div>`;
   if(messagesUnsub){ messagesUnsub(); messagesUnsub=null; }
 
-  const messagesRef=db.collection('users').doc(currentUserID)
-    .collection('dms').doc(friendID).collection('messages').orderBy('timestamp','asc');
+  const chatID = generateChatID(currentUserID, friendID);
+  const messagesRef = db.collection('chats').doc(chatID).collection('messages').orderBy('timestamp','asc');
 
-  messagesUnsub=messagesRef.onSnapshot(snapshot=>{
+  messagesUnsub = messagesRef.onSnapshot(snapshot=>{
     messagesDiv.innerHTML='';
     snapshot.forEach(doc=>{
-      const msg=doc.data();
-      const div=document.createElement('div');
+      const msg = doc.data();
+      const div = document.createElement('div');
       div.className='message '+(msg.senderID===currentUserID?'sent':'received');
       div.textContent=msg.content;
       messagesDiv.appendChild(div);
-      if(msg.senderID!==currentUserID && !msg.read){ doc.ref.update({read:true}).catch(console.error); }
     });
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   });
 }
 
-sendBtn.addEventListener('click', async () => {
-  if (!selectedFriendID) return alert('Select a friend to message!');
+// Send message
+sendBtn.addEventListener('click', async ()=>{
+  if(!selectedFriendID) return alert('Select a friend to message!');
   const content = inputBox.value.trim();
-  if (!content) return;
-  if (!friendIds.has(selectedFriendID)) return alert('You can only message friends!');
+  if(!content) return;
+  if(!friendIds.has(selectedFriendID)) return alert('You can only message friends!');
+  inputBox.value=''; // clear immediately
 
-  const messageData = { 
-    senderID: currentUserID, 
-    content, 
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    read: false,
-    key: "MY_SECRET_KEY"
-  };
-
-  inputBox.value = ''; // clear input immediately
+  const timestamp = Date.now();
+  const messageData = { senderID:currentUserID, content, timestamp, read:false, key:"MY_SECRET_KEY" };
 
   try {
-    const currentUserDMRef = db.collection('users').doc(currentUserID)
-      .collection('dms').doc(selectedFriendID);
-    const friendDMRef = db.collection('users').doc(selectedFriendID)
-      .collection('dms').doc(currentUserID);
-
-    await Promise.all([
-      currentUserDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }),
-      friendDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
-    ]);
-
-    await Promise.all([
-      currentUserDMRef.collection('messages').add(messageData),
-      friendDMRef.collection('messages').add(messageData)
-    ]);
-
-  } catch(err) {
-    alert('Error sending message: ' + err.message);
+    const chatID = generateChatID(currentUserID, selectedFriendID);
+    const chatRef = db.collection('chats').doc(chatID);
+    await chatRef.set({ createdAt: timestamp }, { merge:true });
+    await chatRef.collection('messages').add(messageData);
+  } catch(err){
+    alert('Error sending message: '+err.message);
   }
 });
 </script>
 </body>
 </html>
-
