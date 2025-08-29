@@ -230,41 +230,34 @@ function selectConversation(friendID, friendName){
   });
 }
 
-sendBtn.addEventListener('click', async () => {
-  if (!selectedFriendID) return alert('Select a friend to message!');
+sendBtn.addEventListener('click', async ()=>{
+  if(!selectedFriendID) return alert('Select a friend to message!');
   const content = inputBox.value.trim();
-  if (!content) return;
-  if (!friendIds.has(selectedFriendID)) return alert('You can only message friends!');
+  if(!content) return;
+  if(!friendIds.has(selectedFriendID)) return alert('You can only message friends!');
 
   const messageData = { 
     senderID: currentUserID, 
     content, 
     timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
-    read: false,
-    key: "MY_SECRET_KEY"
+    read: false, 
+    key: "MY_SECRET_KEY" 
   };
 
-  try {
-    // Ensure DM doc exists for current user
-    const currentUserDMRef = db.collection('users').doc(currentUserID)
-      .collection('dms').doc(selectedFriendID);
-    await currentUserDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  try{
+    await db.collection('users').doc(currentUserID)
+      .collection('dms').doc(selectedFriendID)
+      .collection('messages').add(messageData);
 
-    // Ensure DM doc exists for friend
-    const friendDMRef = db.collection('users').doc(selectedFriendID)
-      .collection('dms').doc(currentUserID);
-    await friendDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-
-    // Add message to both users' messages subcollection
-    await currentUserDMRef.collection('messages').add(messageData);
-    await friendDMRef.collection('messages').add(messageData);
+    await db.collection('users').doc(selectedFriendID)
+      .collection('dms').doc(currentUserID)
+      .collection('messages').add(messageData);
 
     inputBox.value = '';
-  } catch(err) {
+  }catch(err){
     alert('Error sending message: ' + err.message);
   }
 });
-
 </script>
 </body>
 </html>
