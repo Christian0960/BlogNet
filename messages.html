@@ -175,39 +175,43 @@ function selectConversation(friendID, friendName){
   });
 }
 
-sendBtn.addEventListener('click', async () => {
-  if (!selectedFriendID) return alert('Select a friend to message!');
-  const content = inputBox.value.trim();
-  if (!content) return;
-  if (!friendIds.has(selectedFriendID)) return alert('You can only message friends!');
-
+// Send a message
+sendBtn.addEventListener('click', async()=>{
+  if(!selectedFriendID)return alert('Select a friend to message!');
+  const content=inputBox.value.trim();
+  if(!content)return;
+  if(!friendIds.has(selectedFriendID))return alert('You can only message friends!');
 
   const messageData = { 
-    senderID: currentUserID, 
-    content, 
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
-    read: false,
-    key: "MY_SECRET_KEY" 
+  senderID: currentUserID, 
+  content, 
+  timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
+  read: false,
+  key: "MY_SECRET_KEY"  
+};
+
+  const messageData={
+    senderID:currentUserID,
+    content,
+    timestamp:firebase.firestore.FieldValue.serverTimestamp(),
+    read:false
   };
 
-  try {
-    const currentUserDMRef = db.collection('users').doc(currentUserID)
-      .collection('dms').doc(selectedFriendID);
-    await currentUserDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  try{
+    const currentUserDMRef=db.collection('users').doc(currentUserID).collection('dms').doc(selectedFriendID);
+    const friendDMRef=db.collection('users').doc(selectedFriendID).collection('dms').doc(currentUserID);
 
-    const friendDMRef = db.collection('users').doc(selectedFriendID)
-      .collection('dms').doc(currentUserID);
-    await friendDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    // Ensure DM docs exist
+    await currentUserDMRef.set({createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    await friendDMRef.set({createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
 
+    // Add message to both users
     await currentUserDMRef.collection('messages').add(messageData);
     await friendDMRef.collection('messages').add(messageData);
 
-    inputBox.value = '';
-  } catch(err) {
-    alert('Error sending message: ' + err.message);
-  }
+    inputBox.value='';
+  }catch(err){ alert('Error sending message: '+err.message); }
 });
-
 </script>
 </body>
 </html>
