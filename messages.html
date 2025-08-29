@@ -182,14 +182,6 @@ sendBtn.addEventListener('click', async()=>{
   if(!content)return;
   if(!friendIds.has(selectedFriendID))return alert('You can only message friends!');
 
-  const messageData = { 
-  senderID: currentUserID, 
-  content, 
-  timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
-  read: false,
-  key: "MY_SECRET_KEY"  
-};
-
   const messageData={
     senderID:currentUserID,
     content,
