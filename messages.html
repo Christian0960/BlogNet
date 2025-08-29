@@ -128,7 +128,7 @@ let friendIds = new Set();
 let messagesUnsub = null;
 
 backBtn.addEventListener('click', () => { 
-  localStorage.setItem('lastDMsOpenedAt', String(Date.now())); // mark as read
+  localStorage.setItem('lastDMsOpenedAt', String(Date.now())); 
   window.location.href='index.html';
 });
 
@@ -138,10 +138,7 @@ db.collection('users').doc(currentUserID).collection('friends')
     friendIds.clear();
     conversationsDiv.innerHTML='<h2>Chats</h2>';
     if(snapshot.empty){
-      const p=document.createElement('p'); 
-      p.textContent='No friends yet.'; 
-      conversationsDiv.appendChild(p); 
-      return;
+      const p=document.createElement('p'); p.textContent='No friends yet.'; conversationsDiv.appendChild(p); return;
     }
     snapshot.forEach(doc=>{
       friendIds.add(doc.id);
@@ -158,13 +155,10 @@ db.collection('users').doc(currentUserID).collection('friends')
 function selectConversation(friendID, friendName){
   selectedFriendID=friendID;
   messagesDiv.innerHTML=`<div class="message received">Chatting with ${friendName}</div>`;
-
   if(messagesUnsub){ messagesUnsub(); messagesUnsub=null; }
 
   const messagesRef=db.collection('users').doc(currentUserID)
-    .collection('dms').doc(friendID)
-    .collection('messages')
-    .orderBy('timestamp', 'asc');
+    .collection('dms').doc(friendID).collection('messages').orderBy('timestamp','asc');
 
   messagesUnsub=messagesRef.onSnapshot(snapshot=>{
     messagesDiv.innerHTML='';
@@ -174,30 +168,34 @@ function selectConversation(friendID, friendName){
       div.className='message '+(msg.senderID===currentUserID?'sent':'received');
       div.textContent=msg.content;
       messagesDiv.appendChild(div);
-      if(msg.senderID!==currentUserID && !msg.read){ 
-        doc.ref.update({read:true}).catch(console.error); 
-      }
+      if(msg.senderID!==currentUserID && !msg.read){ doc.ref.update({read:true}).catch(console.error); }
     });
-    messagesDiv.scrollTop=messagesDiv.scrollHeight;
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
   });
 }
 
-// Send message
+// Send message with instant UI update
 sendBtn.addEventListener('click', async () => {
   if (!selectedFriendID) return alert('Select a friend to message!');
   const content = inputBox.value.trim();
   if (!content) return;
   if (!friendIds.has(selectedFriendID)) return alert('You can only message friends!');
 
-  const now = Date.now(); // client timestamp
   const messageData = { 
     senderID: currentUserID, 
     content, 
-    timestamp: now, // for instant ordering
-    serverTimestamp: firebase.firestore.FieldValue.serverTimestamp(), // still keep server timestamp
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
     read: false,
     key: "MY_SECRET_KEY"
   };
+
+  // Instant message for sender
+  const div = document.createElement('div');
+  div.className = 'message sent';
+  div.textContent = content;
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  inputBox.value = '';
 
   try {
     const currentUserDMRef = db.collection('users').doc(currentUserID)
@@ -208,11 +206,8 @@ sendBtn.addEventListener('click', async () => {
       .collection('dms').doc(currentUserID);
     await friendDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
 
-    // Add message to both users instantly
     await currentUserDMRef.collection('messages').add(messageData);
     await friendDMRef.collection('messages').add(messageData);
-
-    inputBox.value = '';
   } catch(err) {
     alert('Error sending message: ' + err.message);
   }
@@ -220,5 +215,3 @@ sendBtn.addEventListener('click', async () => {
 </script>
 </body>
 </html>
-
-
