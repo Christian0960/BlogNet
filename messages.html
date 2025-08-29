@@ -171,26 +171,49 @@ function selectConversation(friendID, friendName){
   });
 }
 
-// Send message
-sendBtn.addEventListener('click', async ()=>{
-  if(!selectedFriendID) return alert('Select a friend to message!');
+sendBtn.addEventListener('click', async () => {
+  if (!selectedFriendID) return alert('Select a friend to message!');
   const content = inputBox.value.trim();
-  if(!content) return;
-  if(!friendIds.has(selectedFriendID)) return alert('You can only message friends!');
-  inputBox.value=''; // clear immediately
+  if (!content) return;
+  if (!friendIds.has(selectedFriendID)) return alert('You can only message friends!');
 
-  const timestamp = Date.now();
-  const messageData = { senderID:currentUserID, content, timestamp, read:false, key:"MY_SECRET_KEY" };
+  const timestamp = Date.now(); // local timestamp
+  const messageData = { 
+    senderID: currentUserID, 
+    content, 
+    timestamp, 
+    read: false,
+    key: "MY_SECRET_KEY"
+  };
+
+  // Render immediately
+  const div = document.createElement('div');
+  div.className = 'message sent';
+  div.textContent = content;
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+  inputBox.value = ''; // clear input immediately
 
   try {
-    const chatID = generateChatID(currentUserID, selectedFriendID);
-    const chatRef = db.collection('chats').doc(chatID);
-    await chatRef.set({ createdAt: timestamp }, { merge:true });
-    await chatRef.collection('messages').add(messageData);
-  } catch(err){
-    alert('Error sending message: '+err.message);
+    const currentUserDMRef = db.collection('users').doc(currentUserID)
+      .collection('dms').doc(selectedFriendID);
+    const friendDMRef = db.collection('users').doc(selectedFriendID)
+      .collection('dms').doc(currentUserID);
+
+    // Make sure the chat exists
+    await Promise.all([
+      currentUserDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }),
+      friendDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+    ]);
+
+    // Fire-and-forget writes (don’t await them sequentially)
+    currentUserDMRef.collection('messages').add(messageData).catch(console.error);
+    friendDMRef.collection('messages').add(messageData).catch(console.error);
+
+  } catch(err) {
+    alert('Error sending message: ' + err.message);
   }
 });
 </script>
 </body>
-</html>
