@@ -174,7 +174,6 @@ function selectConversation(friendID, friendName){
   });
 }
 
-// Send message with instant UI update
 sendBtn.addEventListener('click', async () => {
   if (!selectedFriendID) return alert('Select a friend to message!');
   const content = inputBox.value.trim();
@@ -189,25 +188,24 @@ sendBtn.addEventListener('click', async () => {
     key: "MY_SECRET_KEY"
   };
 
-  // Instant message for sender
-  const div = document.createElement('div');
-  div.className = 'message sent';
-  div.textContent = content;
-  messagesDiv.appendChild(div);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  inputBox.value = '';
+  inputBox.value = ''; // clear input immediately
 
   try {
     const currentUserDMRef = db.collection('users').doc(currentUserID)
       .collection('dms').doc(selectedFriendID);
-    await currentUserDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-
     const friendDMRef = db.collection('users').doc(selectedFriendID)
       .collection('dms').doc(currentUserID);
-    await friendDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
 
-    await currentUserDMRef.collection('messages').add(messageData);
-    await friendDMRef.collection('messages').add(messageData);
+    await Promise.all([
+      currentUserDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }),
+      friendDMRef.set({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+    ]);
+
+    await Promise.all([
+      currentUserDMRef.collection('messages').add(messageData),
+      friendDMRef.collection('messages').add(messageData)
+    ]);
+
   } catch(err) {
     alert('Error sending message: ' + err.message);
   }
@@ -215,3 +213,4 @@ sendBtn.addEventListener('click', async () => {
 </script>
 </body>
 </html>
+
