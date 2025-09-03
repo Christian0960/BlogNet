@@ -127,7 +127,7 @@
 </head>
 <body>
 <header>
-  <button id="back-btn">← Back</button>
+  <button id="back-btn">Here</button>
   THE BLOG NETWORK — Direct Messages
 </header>
 <div class="container">
@@ -213,19 +213,20 @@ function selectConversation(friendID, friendName){
     .collection('messages').orderBy('timestamp','asc');
 
   messagesUnsub = messagesRef.onSnapshot(snapshot => {
-    messagesDiv.innerHTML = '';
-    snapshot.forEach(doc => {
-      const msg = doc.data();
-      const div = document.createElement('div');
-      div.className = 'message ' + (msg.senderID === currentUserID ? 'sent' : 'received');
-      div.textContent = msg.content;
-      messagesDiv.appendChild(div);
+    snapshot.docChanges().forEach(change => {
+      if (change.type === 'added') {
+        const msg = change.doc.data();
+        const div = document.createElement('div');
+        div.className = 'message ' + (msg.senderID === currentUserID ? 'sent' : 'received');
+        div.textContent = msg.content;
+        messagesDiv.appendChild(div);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-      if(msg.senderID !== currentUserID && !msg.read){
-        doc.ref.update({ read: true }).catch(console.error);
+        if(msg.senderID !== currentUserID && !msg.read){
+          change.doc.ref.update({ read: true }).catch(console.error);
+        }
       }
     });
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
   });
 }
 
@@ -239,7 +240,7 @@ sendBtn.addEventListener('click', async ()=>{
   const messageData = { 
     senderID: currentUserID, 
     content, 
-    timestamp: localTimestamp.getTime(), // use local timestamp for display
+    timestamp: localTimestamp.getTime(), 
     read: false, 
     key: "MY_SECRET_KEY" 
   };
@@ -281,4 +282,3 @@ sendBtn.addEventListener('click', async ()=>{
 </script>
 </body>
 </html>
-
