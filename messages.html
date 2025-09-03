@@ -235,17 +235,21 @@ sendBtn.addEventListener('click', async ()=>{
   if(!content) return;
   if(!friendIds.has(selectedFriendID)) return alert('You can only message friends!');
 
-  // local timestamp fallback to avoid delay
   const localTimestamp = new Date();
-
   const messageData = { 
     senderID: currentUserID, 
     content, 
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
-    localTimestamp: localTimestamp.getTime(),
+    timestamp: localTimestamp.getTime(), // use local timestamp for display
     read: false, 
     key: "MY_SECRET_KEY" 
   };
+
+  // Display the message immediately
+  const div = document.createElement('div');
+  div.className = 'message sent';
+  div.textContent = content;
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
   try{
     const senderRef = db.collection('users').doc(currentUserID)
@@ -256,9 +260,17 @@ sendBtn.addEventListener('click', async ()=>{
       .collection('dms').doc(currentUserID)
       .collection('messages');
 
+    const serverMessageData = { 
+      senderID: currentUserID, 
+      content, 
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
+      read: false, 
+      key: "MY_SECRET_KEY" 
+    };
+
     await Promise.all([
-      senderRef.add(messageData),
-      receiverRef.add(messageData)
+      senderRef.add(serverMessageData),
+      receiverRef.add(serverMessageData)
     ]);
 
     inputBox.value = '';
@@ -269,3 +281,4 @@ sendBtn.addEventListener('click', async ()=>{
 </script>
 </body>
 </html>
+
